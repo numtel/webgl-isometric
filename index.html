@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<title>Snorb 2020</title>
+<style>
+html,body {width:100%;height:100%;margin:0;overflow:hidden;}
+canvas {width:100vw; height:100vh; display:block;}
+#debug {position: fixed; top:0; left:0;color:white; }
+</style>
+</head>
+<body oncontextmenu="return false">
+<pre id="debug"></pre>
+<script type="module">
+import IsoView from './IsoView.js';
+
+const game = new IsoView({
+  fullPage: true,
+  fragmentShader: 'main.glsl',
+});
+
+(async function() {
+  await game.init();
+  const texture = game.gl.createTexture();
+  game.gl.bindTexture(game.gl.TEXTURE_2D, texture);
+
+  // Fill the texture with a 1x1 blue pixel.
+  game.gl.texImage2D(game.gl.TEXTURE_2D, 0, game.gl.RGBA, 1, 1, 0, game.gl.RGBA, game.gl.UNSIGNED_BYTE,
+                new Uint8Array([0, 0, 255, 255]));
+
+  // Asynchronously load an image
+  var image = new Image();
+  image.src = 'test.png';
+  image.addEventListener('load', function() {
+    // Now that the image has loaded make copy it to the texture.
+    game.gl.bindTexture(game.gl.TEXTURE_2D, texture);
+    game.gl.texImage2D(game.gl.TEXTURE_2D, 0, game.gl.RGBA, game.gl.RGBA,game.gl.UNSIGNED_BYTE, image);
+    game.gl.generateMipmap(game.gl.TEXTURE_2D);
+  });
+  document.body.append(game.element);
+})();
+</script>
+</body>
+</html>
