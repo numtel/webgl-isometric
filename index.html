@@ -14,30 +14,137 @@ canvas {width:100vw; height:100vh; display:block;}
 <pre id="debug"></pre>
 <script type="module">
 import IsoView from './IsoView.js';
+import DataChannel from './DataChannel.js';
+import TMXMap from './TMXMap.js';
 
-const game = new IsoView({
-  fullPage: true,
-  fragmentShader: 'main.glsl',
-});
 
 (async function() {
-  await game.init();
-  const texture = game.gl.createTexture();
-  game.gl.bindTexture(game.gl.TEXTURE_2D, texture);
+  const map = new TMXMap;
+  await map.load('zeldish.tmx');
 
-  // Fill the texture with a 1x1 blue pixel.
-  game.gl.texImage2D(game.gl.TEXTURE_2D, 0, game.gl.RGBA, 1, 1, 0, game.gl.RGBA, game.gl.UNSIGNED_BYTE,
-                new Uint8Array([0, 0, 255, 255]));
-
-  // Asynchronously load an image
-  var image = new Image();
-  image.src = 'test.png';
-  image.addEventListener('load', function() {
-    // Now that the image has loaded make copy it to the texture.
-    game.gl.bindTexture(game.gl.TEXTURE_2D, texture);
-    game.gl.texImage2D(game.gl.TEXTURE_2D, 0, game.gl.RGBA, game.gl.RGBA,game.gl.UNSIGNED_BYTE, image);
-    game.gl.generateMipmap(game.gl.TEXTURE_2D);
+  const game = new IsoView({
+    fullPage: true,
+    fragmentShader: 'main.glsl',
+    chunkMap: {
+      map_uniforms: [
+          'uniform vec3 map_props;',
+          'uniform sampler2D u_layer0;',
+        ].join('\n'),
+    },
+    extraUniforms: [
+      new DataChannel('map_props', new Float32Array(
+        [ map.width, map.height, map.tileWidth ]), 3),
+    ],
+    onTapOrClick(event, tilePos) {
+      if(activeCharAnim) {
+        clearTimeout(activeCharAnim);
+        activeCharAnim = null;
+      }
+      animateCharPos(tilePos);
+    },
   });
+  await game.init();
+
+  let activeCharAnim;
+  // thisDirection: corresponds with tileset graphic y (row) value for top tile
+  function animateCharPos(finalTilePos, thisDirection=null) {
+    const xDist = game.data.origin.data[2] - finalTilePos.x;
+    const yDist = game.data.origin.data[3] - finalTilePos.y;
+    const dist = Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
+    const xUnit = dist > 1 ? xDist/dist : xDist;
+    const yUnit = dist > 1 ? yDist/dist : yDist;
+    const areWeThereYet =
+      Math.abs(game.data.origin.data[2] - finalTilePos.x) +
+      Math.abs(game.data.origin.data[3] - finalTilePos.y) > 0.1;
+    game.data.origin.data[2] -= xUnit / 3;
+    game.data.origin.data[3] -= yUnit / 3;
+    const thisAnimFrame = game.data.origin.data[4];
+    game.data.origin.data[4] = !areWeThereYet || thisAnimFrame === 3 ?  0 : thisAnimFrame + 1;
+    const xUnitA = Math.abs(xUnit);
+    const yUnitA = Math.abs(yUnit);
+    if(thisDirection === null) {
+      if(xUnitA > yUnitA && xUnit > 0) thisDirection = 3         // left
+      else if(xUnitA > yUnitA && xUnit <= 0) thisDirection = 1   // right
+      else if(xUnitA <= yUnitA && yUnit > 0) thisDirection = 2   // up
+      else if(xUnitA <= yUnitA && yUnit <= 0) thisDirection = 0; // down
+      game.data.origin.data[5] = thisDirection;
+    }
+    game.data.origin.isDirty = true;
+    if(areWeThereYet) {
+      activeCharAnim = setTimeout(() => {
+        animateCharPos(finalTilePos, thisDirection);
+      }, 100);
+    }
+  }
+
+  function lay0() {
+    game.gl.pixelStorei(game.gl.UNPACK_ALIGNMENT, 1);
+    const loc = game.gl.getUniformLocation(game.program, 'u_layer0');
+    game.gl.uniform1i(loc, 0);
+    const texture = game.gl.createTexture();
+    game.gl.activeTexture(game.gl.TEXTURE0);
+    game.gl.bindTexture(game.gl.TEXTURE_2D, texture);
+    const pixels = [];
+    // TODO aggregate more than 4 layers into 4 layers of sprites per tile
+    for(let l=0; l<4; l+=2) {
+//       for(let i =0; i< map.layers[l].data.length; i++) {
+      for(let y=0; y<map.layers[l].height; y++) {
+        for(let x=0; x<map.layers[l].width; x++){
+//           const tilegid =map.layers[l].data[x];
+          const tilegid = map.layers[l].data[x+(y*map.layers[l].width)];
+//           const tilegid=map.layers[l].data[i];
+          const columns = 64;
+          if(tilegid === 0) {
+            pixels.push(0,0,0,0);
+          } else {
+            pixels.push((tilegid-1) % columns, Math.floor((tilegid-1) / columns), 0, 255);
+          }
+        }
+        for(let x=0; x<map.layers[l].width; x++){
+//           const tilegid =map.layers[l].data[x];
+          const tilegid = map.layers[l+1].data[x+(y*map.layers[l].width)];
+//           const tilegid=map.layers[l].data[i];
+          const columns = 64;
+          if(tilegid === 0) {
+            pixels.push(0,0,0,0);
+          } else {
+            pixels.push((tilegid-1) % columns, Math.floor((tilegid-1) / columns), 0, 255);
+          }
+        }
+      }
+    }
+    game.gl.texImage2D(
+      game.gl.TEXTURE_2D,
+      0,
+      game.gl.RGBA, map.layers[0].width * 2, map.layers[0].height * 2, 0,
+//       game.gl.RGBA, 4, 1, 0,
+      game.gl.RGBA, game.gl.UNSIGNED_BYTE,
+      new Uint8Array(pixels)
+    );
+//     game.gl.generateMipmap(game.gl.TEXTURE_2D);
+    game.gl.texParameteri(game.gl.TEXTURE_2D, game.gl.TEXTURE_WRAP_S, game.gl.CLAMP_TO_EDGE);
+    game.gl.texParameteri(game.gl.TEXTURE_2D, game.gl.TEXTURE_WRAP_T, game.gl.CLAMP_TO_EDGE);
+    game.gl.texParameteri(game.gl.TEXTURE_2D, game.gl.TEXTURE_MIN_FILTER, game.gl.NEAREST);
+    game.gl.texParameteri(game.gl.TEXTURE_2D, game.gl.TEXTURE_MAG_FILTER, game.gl.NEAREST);
+  }
+  lay0();
+
+
+  for(let i=0; i<map.tileSets.length; i++) {
+    const tileSet = map.tileSets[i];
+    const loc = game.gl.getUniformLocation(game.program, 'u_texture' + i);
+    game.gl.uniform1i(loc, i + 1);
+    const texture = game.gl.createTexture();
+    game.gl.activeTexture(game.gl.TEXTURE1 + i);
+    game.gl.bindTexture(game.gl.TEXTURE_2D, texture);
+    game.gl.texImage2D(game.gl.TEXTURE_2D, 0, game.gl.RGBA, game.gl.RGBA,game.gl.UNSIGNED_BYTE, tileSet.image);
+    game.gl.texParameteri(game.gl.TEXTURE_2D, game.gl.TEXTURE_WRAP_S, game.gl.CLAMP_TO_EDGE);
+    game.gl.texParameteri(game.gl.TEXTURE_2D, game.gl.TEXTURE_WRAP_T, game.gl.CLAMP_TO_EDGE);
+    game.gl.texParameteri(game.gl.TEXTURE_2D, game.gl.TEXTURE_MIN_FILTER, game.gl.NEAREST);
+    game.gl.texParameteri(game.gl.TEXTURE_2D, game.gl.TEXTURE_MAG_FILTER, game.gl.NEAREST);
+  }
+
+
   document.body.append(game.element);
 })();
 </script>

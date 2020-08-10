@@ -5,9 +5,11 @@ export default class IsoView {
     this.options = Object.assign({
       fullPage: false,
       extraUniforms: [],
-      tileSizeMin: 10,
+      chunkMap: {},
+      tileSizeMin: 3,
       maxFrameCount: Math.pow(2,32) - 1,
       fragmentShader: 'frag.glsl',
+      onTapOrClick: null,
     }, options);
 
     this.element = document.createElement('canvas');
@@ -22,14 +24,14 @@ export default class IsoView {
     this.gl = null;
     this.program = null;
     this.uniforms = [
-      new DataChannel(this, 'canvas_size', new Float32Array([
+      new DataChannel('canvas_size', new Float32Array([
         this.element.width, this.element.height]), 2),
-      new DataChannel(this, 'frame_num', new Float32Array([0])),
+      new DataChannel('frame_num', new Float32Array([0])),
       // tile_size: x=width, y=height proportion to width
-      new DataChannel(this, 'tile_size', new Float32Array([60, 0.5]), 2),
+      new DataChannel('tile_size', new Float32Array([60, 0.5]), 2),
       // cursor_size: x=pos, y=pos, z=size
-      new DataChannel(this, 'cursor', new Float32Array([0, 0, 20]), 3),
-      new DataChannel(this, 'origin', new Float32Array([200, 100]), 2),
+      new DataChannel('cursor', new Float32Array([0, 0, 20]), 3),
+      new DataChannel('origin', new Float32Array([200, 100, 5.2, 5.0, 0, 0])),
     ].concat(this.options.extraUniforms);
     // Uniforms by-name
     this.data = this.uniforms.reduce((obj, uniform) => {
@@ -56,12 +58,17 @@ export default class IsoView {
       throw this.gl.getShaderInfoLog(vertexShader);
 
     const fragmentShader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
-    this.gl.shaderSource(fragmentShader,
-      await (await fetch(this.options.fragmentShader)).text());
+    const fragmentShaderText = replaceChunks(
+      await (await fetch(this.options.fragmentShader)).text(), this.options.chunkMap);
+    this.gl.shaderSource(fragmentShader, fragmentShaderText);
     this.gl.compileShader(fragmentShader);
 
-    if(!this.gl.getShaderParameter(fragmentShader, this.gl.COMPILE_STATUS))
+    if(!this.gl.getShaderParameter(fragmentShader, this.gl.COMPILE_STATUS)) {
+      console.log(fragmentShaderText.split('\n').map((line, index) => {
+        return index + ': ' + line;
+      }).join('\n'));
       throw this.gl.getShaderInfoLog(fragmentShader);
+    }
 
     this.program = this.gl.createProgram();
     this.gl.attachShader(this.program, vertexShader);
@@ -114,6 +121,14 @@ export default class IsoView {
       touchStartCursor = this.data.cursor.clone();
     }, false);
     this.element.addEventListener('mouseup', event => {
+      if(touchStartPos.data[0] === this.data.origin.data[0]
+          && touchStartPos.data[1] === this.data.origin.data[1]
+          && typeof this.options.onTapOrClick === 'function') {
+        this.options.onTapOrClick(event, {
+          x: (event.layerX - event.target.offsetLeft - this.data.origin.data[0]) / this.data.tile_size.x,
+          y: (event.layerY - event.target.offsetTop - this.data.origin.data[1]) / this.data.tile_size.x,
+        });
+      }
       touchStartPos = null;
     }, false);
     this.element.addEventListener('mouseout', event => {
@@ -123,13 +138,14 @@ export default class IsoView {
       this.data.cursor.x = event.layerX - event.target.offsetLeft;
       this.data.cursor.y = event.layerY - event.target.offsetTop;
       if(touchStartPos) {
-        this.data.origin.x = touchStartPos.x + this.data.cursor.x - touchStartCursor.x;
-        this.data.origin.y = touchStartPos.y + this.data.cursor.y - touchStartCursor.y;
+        this.data.origin.data[0] = touchStartPos.data[0] + this.data.cursor.x - touchStartCursor.x;
+        this.data.origin.data[1] = touchStartPos.data[1] + this.data.cursor.y - touchStartCursor.y;
+        this.data.origin.isDirty = true;
       }
     }, false);
     this.element.addEventListener('wheel', event => {
-      const rawX = event.layerX - event.target.offsetLeft - this.data.origin.x;
-      const rawY = event.layerY - event.target.offsetTop - this.data.origin.y;
+      const rawX = event.layerX - event.target.offsetLeft - this.data.origin.data[0];
+      const rawY = event.layerY - event.target.offsetTop - this.data.origin.data[1];
       const beforeTileX = -(rawX * this.data.tile_size.y - rawY) / this.data.tile_size.x;
       const beforeTileY = -(-rawX * this.data.tile_size.y - rawY) / this.data.tile_size.x;
 
@@ -143,8 +159,9 @@ export default class IsoView {
       const tilePosY = this.data.tile_size.x * this.data.tile_size.y * (beforeTileY + beforeTileX);
 
       // Maintain centering
-      this.data.origin.x -= tilePosX - rawX;
-      this.data.origin.y -= tilePosY - rawY;
+      this.data.origin.data[0] -= tilePosX - rawX;
+      this.data.origin.data[1] -= tilePosY - rawY;
+      this.data.origin.isDirty = true;
     }, false);
     this.element.addEventListener('touchstart', event => {
       event.preventDefault();
@@ -153,7 +170,7 @@ export default class IsoView {
 
       touchStartPos = this.data.origin.clone();
       touchStartCursor = this.data.cursor.clone();
-      if (event.targetTouches.length == 2) {
+      if (event.targetTouches.length === 2) {
         for (let i=0; i < event.targetTouches.length; i++) {
           tpCache.push(event.targetTouches[i]);
         }
@@ -162,15 +179,22 @@ export default class IsoView {
 
         // For centering
         initOg = this.data.origin.clone();
-        const initRawX = (tpCache[0].clientX + tpCache[1].clientX)/2  - this.data.origin.x;
-        const initRawY = (tpCache[0].clientY + tpCache[1].clientX)/2 - this.data.origin.y;
-        this.data.cursor.x = initRawX + initOg.x;
-        this.data.cursor.y = initRawY + initOg.y;
+        const initRawX = (tpCache[0].clientX + tpCache[1].clientX)/2  - this.data.origin.data[0];
+        const initRawY = (tpCache[0].clientY + tpCache[1].clientX)/2 - this.data.origin.data[1];
+        this.data.cursor.x = initRawX + initOg.data[0];
+        this.data.cursor.y = initRawY + initOg.data[1];
 
         initTileX = -(initRawX * this.data.tile_size.y - initRawY) / this.data.tile_size.x;
         initTileY = -(-initRawX * this.data.tile_size.y - initRawY) / this.data.tile_size.x;
         initTilePosX = this.data.tile_size.x * (initTileY - initTileX);
         initTilePosY = this.data.tile_size.x * this.data.tile_size.y * (initTileY + initTileX);
+      } else if (event.targetTouches.length === 1) {
+        if(typeof this.options.onTapOrClick === 'function') {
+          this.options.onTapOrClick(event, {
+            x: (event.targetTouches[0].clientX - event.target.offsetLeft - this.data.origin.data[0]) / this.data.tile_size.x,
+            y: (event.targetTouches[0].clientY - event.target.offsetTop - this.data.origin.data[1]) / this.data.tile_size.x,
+          });
+        }
       }
     }, false);
     this.element.addEventListener('touchmove', event => {
@@ -192,15 +216,17 @@ export default class IsoView {
         // Maintain centering
         const tilePosX = this.data.tile_size.x * (initTileY - initTileX);
         const tilePosY = this.data.tile_size.x * this.data.tile_size.y * (initTileY + initTileX);
-        this.data.origin.x = initOg.x + initTilePosX - tilePosX;
-        this.data.origin.y = initOg.y + initTilePosY - tilePosY;
+        this.data.origin.data[0] = initOg.data[0] + initTilePosX - tilePosX;
+        this.data.origin.data[1] = initOg.data[1] + initTilePosY - tilePosY;
+        this.data.origin.isDirty = true;
 
       } else if(event.changedTouches.length === 1 && tpCache.length === 0) {
 
         this.data.cursor.x = event.changedTouches[0].pageX - event.target.offsetLeft;
         this.data.cursor.y = event.changedTouches[0].pageY - event.target.offsetTop;
-        this.data.origin.x = touchStartPos.x + this.data.cursor.x - touchStartCursor.x;
-        this.data.origin.y = touchStartPos.y + this.data.cursor.y - touchStartCursor.y;
+        this.data.origin.data[0] = touchStartPos.data[0] + this.data.cursor.x - touchStartCursor.x;
+        this.data.origin.data[1] = touchStartPos.data[1] + this.data.cursor.y - touchStartCursor.y;
+        this.data.origin.isDirty = true;
 
       }
     }, false);
@@ -226,7 +252,7 @@ export default class IsoView {
         this.data.frame_num.x = 0;
       }
       this.data.frame_num.x++;
-      for(let uniform of this.uniforms) uniform.update();
+      for(let uniform of this.uniforms) uniform.update(this);
       this.gl.clear(this.gl.COLOR_BUFFER_BIT);
       this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
       window.requestAnimationFrame(draw);
@@ -239,4 +265,8 @@ function pointDistance(point1, point2) {
   return Math.sqrt(
     Math.pow(point1.clientX - point2.clientX, 2) +
     Math.pow(point1.clientY - point2.clientY, 2));
+}
+
+function replaceChunks(glsl, chunkMap) {
+  return glsl.replace(/#include <([a-zA-Z0-9_-]+)>/gi, (match, p1) => chunkMap[p1]);
 }

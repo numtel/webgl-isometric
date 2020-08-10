@@ -2,8 +2,7 @@
 export default class DataChannel {
   // data: Float32Array or Int32Array with length divisible by componentCount
   // componentCount: integer 1-4 (x,y,z,w)
-  constructor(isoview, name, data, componentCount=1, isDirty=true) {
-    this.isoview = isoview;
+  constructor(name, data, componentCount=1, isDirty=true) {
     this.data = data;
     this.name = name;
     this.componentCount = componentCount;
@@ -57,37 +56,36 @@ export default class DataChannel {
   }
   clone() {
     return new DataChannel(
-      this.isoview,
       this.name,
       this.data.slice(),
       this.componentCount,
       false);
   }
-  update() {
+  update(isoview) {
     // Invoked during draw, so be quick!
     if(this.isDirty === false) return;
     if(this.location === null) {
       this.location =
-        this.isoview.gl.getUniformLocation(this.isoview.program, this.name);
+        isoview.gl.getUniformLocation(isoview.program, this.name);
     }
-    if(this.isMultiple === true || this.compoentCount === 1) {
-      this.isoview.gl[`uniform${
+    if(this.isMultiple === true || this.componentCount === 1) {
+      isoview.gl[`uniform${
         this.componentCount}${
         this.isFloat ? 'f' : 'i'}${
         this.isMultiple ? 'v' : ''}`]
         (this.location, this.data);
     } else if(this.componentCount === 2) {
-      this.isoview.gl[`uniform${
+      isoview.gl[`uniform${
         this.componentCount}${
         this.isFloat ? 'f' : 'i'}`]
         (this.location, this.data[0], this.data[1]);
     } else if(this.componentCount === 3) {
-      this.isoview.gl[`uniform${
+      isoview.gl[`uniform${
         this.componentCount}${
         this.isFloat ? 'f' : 'i'}`]
         (this.location, this.data[0], this.data[1], this.data[2]);
     } else if(this.componentCount === 4) {
-      this.isoview.gl[`uniform${
+      isoview.gl[`uniform${
         this.componentCount}${
         this.isFloat ? 'f' : 'i'}`]
         (this.location, this.data[0], this.data[1], this.data[2], this.data[3]);
