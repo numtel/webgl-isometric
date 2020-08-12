@@ -27,7 +27,6 @@ export default class IsoView {
     const dataValues = Object.entries(Object.assign({
       CANVAS_WIDTH: this.element.width,
       CANVAS_HEIGHT: this.element.height,
-      FRAME_NUM: 0,
       TILE_SIZE: 60,
       TILE_SIZE_Y: 0.5, // legacy? height proportional to width in isometric
       CURSOR_X: 0,
@@ -269,10 +268,6 @@ export default class IsoView {
 
 
     const draw = () => {
-      if(this.FRAME_NUM > this.options.maxFrameCount) {
-        this.FRAME_NUM = 0;
-      }
-      this.FRAME_NUM++;
       for(let uniform of this.uniforms) uniform.update(this);
       this.gl.clear(this.gl.COLOR_BUFFER_BIT);
       this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
