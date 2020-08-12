@@ -33,111 +33,78 @@ vec4 calc_cursor_tile() {
   );
 }
 
-vec3 draw(vec2 px, vec4 tile, vec4 cursor_tile) {
-  float tile_border_width = max(1., min(3., TILE_SIZE * 0.05));
+vec4 drawLayer(vec4 tile, vec2 dimensionMultiplier, vec2 quadOffset, sampler2D texture) {
+  vec4 tileset_coord = texture2D(texture, vec2(
+    ((tile.x+0.01) / (MAP_WIDTH * dimensionMultiplier.x)) + quadOffset.x,
+    ((tile.y+0.01) / (MAP_WIDTH * dimensionMultiplier.y)) + quadOffset.y
+  )).rgba;
+
+  if(tileset_coord.a > 0.5) {
+    return texture2D(u_texture0, vec2(
+      ((tile.z/TILE_SIZE)+(tileset_coord.x*255.))/TILESET0_COLUMNS,
+      ((tile.w/TILE_SIZE)+(tileset_coord.y*255.))/TILESET0_ROWS
+    )).rgba;
+  }
+}
+
+void main() {
+  vec2 px = screen_px();
+  vec4 tile = calc_px_tile(px);
+  vec4 cursor_tile = calc_cursor_tile();
+
   vec3 comp = vec3(0., 0.2, 0.);
 
   if(tile.x >= 0. && tile.y >= 0. && tile.x <= 99. && tile.y <= 99.) {
-    vec4 tileset_coord = texture2D(u_layer0, vec2(
-      (tile.x+0.01) / (MAP_WIDTH * 2.),
-      (tile.y+0.01) / (MAP_WIDTH * 2.)
-    )).rgba;
-    if(tileset_coord.a > 0.5) {
-      comp.rgb = texture2D(u_texture0, vec2(
-        ((tile.z/TILE_SIZE)+(tileset_coord.x*255.))/TILESET0_COLUMNS,
-        ((tile.w/TILE_SIZE)+(tileset_coord.y*255.))/TILESET0_ROWS
-      )).rgb;
+    vec4 layer0 = drawLayer(tile, vec2(2.,2.), vec2(0.,0.), u_layer0);
+    if(layer0.a > 0.5) {
+      comp.rgb = layer0.rgb;
     }
-    tileset_coord = texture2D(u_layer0, vec2(
-      ((tile.x+0.01) / (MAP_WIDTH * 2.)) + (1./2.),
-      (tile.y+0.01) / (MAP_WIDTH * 2.)
-    )).rgba;
-    if(tileset_coord.a > 0.5) {
-      vec4 layer1 = texture2D(u_texture0, vec2(
-        ((tile.z/TILE_SIZE)+(tileset_coord.x*255.))/TILESET0_COLUMNS,
-        ((tile.w/TILE_SIZE)+(tileset_coord.y*255.))/TILESET0_ROWS
-      )).rgba;
-      if(layer1.a > 0.5) {
-        comp.rgb = layer1.rgb;
-      }
+    vec4 layer1 = drawLayer(tile, vec2(2.,2.), vec2(0.5,0.), u_layer0);
+    if(layer1.a > 0.5) {
+      comp.rgb = layer1.rgb;
     }
-    tileset_coord = texture2D(u_layer0, vec2(
-      (tile.x+0.01) / (MAP_WIDTH * 2.),
-      ((tile.y+0.01) / (MAP_WIDTH * 2.)) + (1./2.)
-    )).rgba;
-    if(tileset_coord.a > 0.5) {
-      vec4 layer1 = texture2D(u_texture0, vec2(
-        ((tile.z/TILE_SIZE)+(tileset_coord.x*255.))/TILESET0_COLUMNS,
-        ((tile.w/TILE_SIZE)+(tileset_coord.y*255.))/TILESET0_ROWS
-      )).rgba;
-      if(layer1.a > 0.5) {
-        comp.rgb = layer1.rgb;
-      }
+    vec4 layer2 = drawLayer(tile, vec2(2.,2.), vec2(0.,0.5), u_layer0);
+    if(layer2.a > 0.5) {
+      comp.rgb = layer2.rgb;
     }
-    tileset_coord = texture2D(u_layer0, vec2(
-      ((tile.x+0.01) / (MAP_WIDTH * 2.)) + (1./2.),
-      ((tile.y+0.01) / (MAP_WIDTH * 2.)) + (1./2.)
-    )).rgba;
-    if(tileset_coord.a > 0.5) {
-      vec4 layer1 = texture2D(u_texture0, vec2(
-        ((tile.z/TILE_SIZE)+(tileset_coord.x*255.))/TILESET0_COLUMNS,
-        ((tile.w/TILE_SIZE)+(tileset_coord.y*255.))/TILESET0_ROWS
-      )).rgba;
-      if(layer1.a > 0.5) {
-        comp.rgb = layer1.rgb;
-      }
+    vec4 layer3 = drawLayer(tile, vec2(2.,2.), vec2(0.5,0.5), u_layer0);
+    if(layer3.a > 0.5) {
+      comp.rgb = layer3.rgb;
     }
-    tileset_coord = texture2D(u_anim, vec2(
-      ((tile.x+0.01) / MAP_WIDTH),
-      ((tile.y+0.01) / MAP_HEIGHT)
-    )).rgba;
-    if(tileset_coord.a > 0.5) {
-      vec4 layer1 = texture2D(u_texture0, vec2(
-        ((tile.z/TILE_SIZE)+(tileset_coord.x*255.))/TILESET0_COLUMNS,
-        ((tile.w/TILE_SIZE)+(tileset_coord.y*255.))/TILESET0_ROWS
-      )).rgba;
-      if(layer1.a > 0.5) {
-        comp.rgb = layer1.rgb;
-      }
+    vec4 layer_anim = drawLayer(tile, vec2(1.,1.), vec2(0.,0.), u_anim);
+    if(layer_anim.a > 0.5) {
+      comp.rgb = layer_anim.rgb;
     }
 
-//     comp.rgb = texture2D(u_layer0, vec2(0.01,0.5)).rgb;
   }
   if(tile.x == cursor_tile.x && tile.y == cursor_tile.y) {
     comp.g = 1.;
   }
+
+  // Draw character
   vec2 tile_real = vec2(
     tile.x + (tile.z / TILE_SIZE),
     tile.y + (tile.w / TILE_SIZE)
   );
-  vec2 CHAR_HALFSIZE=vec2(0.5,1.);
+  const vec2 CHAR_HALFSIZE=vec2(0.5,1.);
   if((abs(tile_real.x - CHAR_X) < CHAR_HALFSIZE.x)
       && (abs(tile_real.y - CHAR_Y) < CHAR_HALFSIZE.y)) {
-    vec2 offset = vec2(
-      tile_real.x - CHAR_X,
-      tile_real.y - CHAR_Y
-    );
-//     comp.rgb = vec3(offset.x/CHAR_HALFSIZE.x,offset.y/CHAR_HALFSIZE.y,0.);
+
     vec2 tileset_coord = vec2(
-      offset.x + CHAR_HALFSIZE.x,
-      offset.y + CHAR_HALFSIZE.y
+      tile_real.x - CHAR_X + CHAR_HALFSIZE.x,
+      tile_real.y - CHAR_Y + CHAR_HALFSIZE.y
     );
 
     vec4 char = texture2D(u_texture1, vec2(
       ((tileset_coord.x/CHAR_HALFSIZE.x/2.)+CHAR_TILE_X)/TILESET1_COLUMNS,
       ((tileset_coord.y/CHAR_HALFSIZE.y/2.)+CHAR_TILE_Y)/TILESET1_ROWS
     )).rgba;
+
     if(char.a > 0.5) {
       comp.rgb = char.rgb;
     }
   }
 
-//   if(tile.z < tile_border_width) {
-//     comp.g = max(0.8, comp.g);
-//   }
-//   if(tile.w < tile_border_width) {
-//     comp.r = max(0.8, comp.r);
-//   }
   if(is_cursor(px)) {
     comp.r = 1.;
   }
@@ -146,14 +113,5 @@ vec3 draw(vec2 px, vec4 tile, vec4 cursor_tile) {
     comp.r = 1.;
   }
 
-  return comp;
-}
-
-void main() {
-  vec2 px = screen_px();
-  vec4 tile = calc_px_tile(px);
-  vec4 cursor_tile = calc_cursor_tile();
-
-  gl_FragColor = vec4(draw(px, tile, cursor_tile), 1.);
-//   gl_FragColor = texture2D(u_texture, uv_pos);
+  gl_FragColor = vec4(comp, 1.);
 }
