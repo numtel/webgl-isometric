@@ -5,6 +5,7 @@ export default class IsoView {
     this.options = Object.assign({
       fullPage: false,
       extraUniforms: [],
+      dataValues: {},
       chunkMap: {},
       tileSizeMin: 3,
       maxFrameCount: Math.pow(2,32) - 1,
@@ -23,19 +24,38 @@ export default class IsoView {
 
     this.gl = null;
     this.program = null;
-    this.uniforms = [
-      new DataChannel('canvas_size', new Float32Array([
-        this.element.width, this.element.height]), 2),
-      new DataChannel('frame_num', new Float32Array([0])),
-      // tile_size: x=width, y=height proportion to width
-      new DataChannel('tile_size', new Float32Array([60, 0.5]), 2),
-      // cursor_size: x=pos, y=pos, z=size
-      new DataChannel('cursor', new Float32Array([0, 0, 20]), 3),
-      new DataChannel('origin', new Float32Array([200, 100, 5.2, 5.0, 0, 0])),
-    ].concat(this.options.extraUniforms);
-    // Uniforms by-name
-    this.data = this.uniforms.reduce((obj, uniform) => {
-      obj[uniform.name] = uniform; return obj; }, {});
+    const dataValues = Object.entries(Object.assign({
+      CANVAS_WIDTH: this.element.width,
+      CANVAS_HEIGHT: this.element.height,
+      FRAME_NUM: 0,
+      TILE_SIZE: 60,
+      TILE_SIZE_Y: 0.5, // legacy? height proportional to width in isometric
+      CURSOR_X: 0,
+      CURSOR_Y: 0,
+      CURSOR_SIZE: 20,
+      ORIGIN_X: 200,
+      ORIGIN_Y: 100,
+    }, this.options.dataValues));
+
+    const dataValuesArray = new Float32Array(dataValues.length);
+    const mainChannel = new DataChannel('_data', dataValuesArray);
+    const dataValuesChunks = [ `uniform float _data[${dataValuesArray.length}];` ];
+    for(let i=0; i<dataValues.length;i++) {
+      const val = dataValues[i];
+      dataValuesArray[i] = val[1];
+      dataValuesChunks.push(`#define ${val[0]} _data[${i}]`);
+      Object.defineProperty(this, val[0], {
+        get() {
+          return dataValuesArray[i];
+        },
+        set(value) {
+          dataValuesArray[i] = value;
+          mainChannel.isDirty = true;
+        }
+      })
+    }
+    this.dataValuesChunk = dataValuesChunks.join('\n') + '\n';
+    this.uniforms = [ mainChannel ].concat(this.options.extraUniforms);
   }
   async init() {
     this.gl = this.element.getContext('webgl');
@@ -58,7 +78,14 @@ export default class IsoView {
       throw this.gl.getShaderInfoLog(vertexShader);
 
     const fragmentShader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
-    const fragmentShaderText = replaceChunks(
+    const fragmentShaderText = `
+      #ifdef GL_ES
+      precision highp float;
+      precision highp int;
+      #endif
+
+    ` + this.dataValuesChunk
+      + replaceChunks(
       await (await fetch(this.options.fragmentShader)).text(), this.options.chunkMap);
     this.gl.shaderSource(fragmentShader, fragmentShaderText);
     this.gl.compileShader(fragmentShader);
@@ -117,16 +144,14 @@ export default class IsoView {
     let initTilePosY = null;
     this.element.addEventListener('mousedown', event => {
       event.preventDefault();
-      touchStartPos = this.data.origin.clone();
-      touchStartCursor = this.data.cursor.clone();
+      touchStartPos = { x: this.ORIGIN_X, y: this.ORIGIN_Y };
+      touchStartCursor = { x: this.CURSOR_X, y: this.CURSOR_Y };
     }, false);
     this.element.addEventListener('mouseup', event => {
-      if(touchStartPos.data[0] === this.data.origin.data[0]
-          && touchStartPos.data[1] === this.data.origin.data[1]
-          && typeof this.options.onTapOrClick === 'function') {
+      if(typeof this.options.onTapOrClick === 'function') {
         this.options.onTapOrClick(event, {
-          x: (event.layerX - event.target.offsetLeft - this.data.origin.data[0]) / this.data.tile_size.x,
-          y: (event.layerY - event.target.offsetTop - this.data.origin.data[1]) / this.data.tile_size.x,
+          x: (event.layerX - event.target.offsetLeft - this.ORIGIN_X) / this.TILE_SIZE,
+          y: (event.layerY - event.target.offsetTop - this.ORIGIN_Y) / this.TILE_SIZE,
         });
       }
       touchStartPos = null;
@@ -135,64 +160,62 @@ export default class IsoView {
       touchStartPos = null;
     }, false);
     this.element.addEventListener('mousemove', event => {
-      this.data.cursor.x = event.layerX - event.target.offsetLeft;
-      this.data.cursor.y = event.layerY - event.target.offsetTop;
+      this.CURSOR_X = event.layerX - event.target.offsetLeft;
+      this.CURSOR_Y = event.layerY - event.target.offsetTop;
       if(touchStartPos) {
-        this.data.origin.data[0] = touchStartPos.data[0] + this.data.cursor.x - touchStartCursor.x;
-        this.data.origin.data[1] = touchStartPos.data[1] + this.data.cursor.y - touchStartCursor.y;
-        this.data.origin.isDirty = true;
+        this.ORIGIN_X = touchStartPos.x + this.CURSOR_X - touchStartCursor.x;
+        this.ORIGIN_Y = touchStartPos.y + this.CURSOR_Y - touchStartCursor.y;
       }
     }, false);
     this.element.addEventListener('wheel', event => {
-      const rawX = event.layerX - event.target.offsetLeft - this.data.origin.data[0];
-      const rawY = event.layerY - event.target.offsetTop - this.data.origin.data[1];
-      const beforeTileX = -(rawX * this.data.tile_size.y - rawY) / this.data.tile_size.x;
-      const beforeTileY = -(-rawX * this.data.tile_size.y - rawY) / this.data.tile_size.x;
+      const rawX = event.layerX - event.target.offsetLeft - this.ORIGIN_X;
+      const rawY = event.layerY - event.target.offsetTop - this.ORIGIN_Y;
+      const beforeTileX = -(rawX * this.TILE_SIZE_Y - rawY) / this.TILE_SIZE;
+      const beforeTileY = -(-rawX * this.TILE_SIZE_Y - rawY) / this.TILE_SIZE;
 
       // Zoom
-      this.data.tile_size.x *= event.deltaY > 0 ? 1.2 : 0.8;
-      if(this.data.tile_size.x < this.options.tileSizeMin) {
-        this.data.tile_size.x = this.options.tileSizeMin;
+      this.TILE_SIZE *= event.deltaY > 0 ? 1.2 : 0.8;
+      if(this.TILE_SIZE < this.options.tileSizeMin) {
+        this.TILE_SIZE = this.options.tileSizeMin;
       }
 
-      const tilePosX = this.data.tile_size.x * (beforeTileY - beforeTileX);
-      const tilePosY = this.data.tile_size.x * this.data.tile_size.y * (beforeTileY + beforeTileX);
+      const tilePosX = this.TILE_SIZE * (beforeTileY - beforeTileX);
+      const tilePosY = this.TILE_SIZE * this.TILE_SIZE_Y * (beforeTileY + beforeTileX);
 
       // Maintain centering
-      this.data.origin.data[0] -= tilePosX - rawX;
-      this.data.origin.data[1] -= tilePosY - rawY;
-      this.data.origin.isDirty = true;
+      this.ORIGIN_X -= tilePosX - rawX;
+      this.ORIGIN_Y -= tilePosY - rawY;
     }, false);
     this.element.addEventListener('touchstart', event => {
       event.preventDefault();
-      this.data.cursor.x = event.changedTouches[0].pageX - event.target.offsetLeft;
-      this.data.cursor.y = event.changedTouches[0].pageY - event.target.offsetTop;
+      this.CURSOR_X = event.changedTouches[0].pageX - event.target.offsetLeft;
+      this.CURSOR_Y = event.changedTouches[0].pageY - event.target.offsetTop;
 
-      touchStartPos = this.data.origin.clone();
-      touchStartCursor = this.data.cursor.clone();
+      touchStartPos = { x: this.ORIGIN_X, y: this.ORIGIN_Y };
+      touchStartCursor = { x: this.CURSOR_X, y: this.CURSOR_Y };
       if (event.targetTouches.length === 2) {
         for (let i=0; i < event.targetTouches.length; i++) {
           tpCache.push(event.targetTouches[i]);
         }
         initPinchDistance = pointDistance(tpCache[0], tpCache[1]);
-        initTileWidth = this.data.tile_size.x;
+        initTileWidth = this.TILE_SIZE;
 
         // For centering
-        initOg = this.data.origin.clone();
-        const initRawX = (tpCache[0].clientX + tpCache[1].clientX)/2  - this.data.origin.data[0];
-        const initRawY = (tpCache[0].clientY + tpCache[1].clientX)/2 - this.data.origin.data[1];
-        this.data.cursor.x = initRawX + initOg.data[0];
-        this.data.cursor.y = initRawY + initOg.data[1];
+        initOg = { x: this.ORIGIN_X, y: this.ORIGIN_Y };
+        const initRawX = (tpCache[0].clientX + tpCache[1].clientX)/2  - this.ORIGIN_X;
+        const initRawY = (tpCache[0].clientY + tpCache[1].clientX)/2 - this.ORIGIN_Y;
+        this.CURSOR_X = initRawX + initOg.x;
+        this.CURSOR_Y = initRawY + initOg.y;
 
-        initTileX = -(initRawX * this.data.tile_size.y - initRawY) / this.data.tile_size.x;
-        initTileY = -(-initRawX * this.data.tile_size.y - initRawY) / this.data.tile_size.x;
-        initTilePosX = this.data.tile_size.x * (initTileY - initTileX);
-        initTilePosY = this.data.tile_size.x * this.data.tile_size.y * (initTileY + initTileX);
+        initTileX = -(initRawX * this.TILE_SIZE_Y - initRawY) / this.TILE_SIZE;
+        initTileY = -(-initRawX * this.TILE_SIZE_Y - initRawY) / this.TILE_SIZE;
+        initTilePosX = this.TILE_SIZE * (initTileY - initTileX);
+        initTilePosY = this.TILE_SIZE * this.TILE_SIZE_Y * (initTileY + initTileX);
       } else if (event.targetTouches.length === 1) {
         if(typeof this.options.onTapOrClick === 'function') {
           this.options.onTapOrClick(event, {
-            x: (event.targetTouches[0].clientX - event.target.offsetLeft - this.data.origin.data[0]) / this.data.tile_size.x,
-            y: (event.targetTouches[0].clientY - event.target.offsetTop - this.data.origin.data[1]) / this.data.tile_size.x,
+            x: (event.targetTouches[0].clientX - event.target.offsetLeft - this.ORIGIN_X) / this.TILE_SIZE,
+            y: (event.targetTouches[0].clientY - event.target.offsetTop - this.ORIGIN_Y) / this.TILE_SIZE,
           });
         }
       }
@@ -208,25 +231,23 @@ export default class IsoView {
         }
         const currentPinchDistance = pointDistance(event.targetTouches[0], event.targetTouches[1]);
         const pinchDiff = 1 + ((currentPinchDistance - initPinchDistance) / initPinchDistance);
-        this.data.tile_size.x = initTileWidth * pinchDiff;
-        if(this.data.tile_size.x < this.options.tileSizeMin) {
-          this.data.tile_size.x = this.options.tileSizeMin;
+        this.TILE_SIZE = initTileWidth * pinchDiff;
+        if(this.TILE_SIZE < this.options.tileSizeMin) {
+          this.TILE_SIZE = this.options.tileSizeMin;
         }
 
         // Maintain centering
-        const tilePosX = this.data.tile_size.x * (initTileY - initTileX);
-        const tilePosY = this.data.tile_size.x * this.data.tile_size.y * (initTileY + initTileX);
-        this.data.origin.data[0] = initOg.data[0] + initTilePosX - tilePosX;
-        this.data.origin.data[1] = initOg.data[1] + initTilePosY - tilePosY;
-        this.data.origin.isDirty = true;
+        const tilePosX = this.TILE_SIZE * (initTileY - initTileX);
+        const tilePosY = this.TILE_SIZE * this.TILE_SIZE_Y * (initTileY + initTileX);
+        this.ORIGIN_X = initOg.x + initTilePosX - tilePosX;
+        this.ORIGIN_Y = initOg.y + initTilePosY - tilePosY;
 
       } else if(event.changedTouches.length === 1 && tpCache.length === 0) {
 
-        this.data.cursor.x = event.changedTouches[0].pageX - event.target.offsetLeft;
-        this.data.cursor.y = event.changedTouches[0].pageY - event.target.offsetTop;
-        this.data.origin.data[0] = touchStartPos.data[0] + this.data.cursor.x - touchStartCursor.x;
-        this.data.origin.data[1] = touchStartPos.data[1] + this.data.cursor.y - touchStartCursor.y;
-        this.data.origin.isDirty = true;
+        this.CURSOR_X = event.changedTouches[0].pageX - event.target.offsetLeft;
+        this.CURSOR_Y = event.changedTouches[0].pageY - event.target.offsetTop;
+        this.ORIGIN_X = touchStartPos.x + this.CURSOR_X - touchStartCursor.x;
+        this.ORIGIN_Y = touchStartPos.y + this.CURSOR_Y - touchStartCursor.y;
 
       }
     }, false);
@@ -238,8 +259,8 @@ export default class IsoView {
 
     if(this.options.fullPage) {
       const resize = () => {
-        this.data.canvas_size.x = this.element.width = window.innerWidth;
-        this.data.canvas_size.y = this.element.height = window.innerHeight;
+        this.CANVAS_WIDTH = this.element.width = window.innerWidth;
+        this.CANVAS_HEIGHT = this.element.height = window.innerHeight;
         this.gl.viewport(0, 0, this.element.width, this.element.height);
       }
       window.addEventListener('resize', resize, false);
@@ -248,16 +269,60 @@ export default class IsoView {
 
 
     const draw = () => {
-      if(this.data.frame_num.x > this.options.maxFrameCount) {
-        this.data.frame_num.x = 0;
+      if(this.FRAME_NUM > this.options.maxFrameCount) {
+        this.FRAME_NUM = 0;
       }
-      this.data.frame_num.x++;
+      this.FRAME_NUM++;
       for(let uniform of this.uniforms) uniform.update(this);
       this.gl.clear(this.gl.COLOR_BUFFER_BIT);
       this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
       window.requestAnimationFrame(draw);
     }
     draw();
+  }
+  _createTexture(name, slot) {
+    const loc = this.gl.getUniformLocation(this.program, name);
+    this.gl.uniform1i(loc, slot);
+    const texture = this.gl.createTexture();
+    this.gl.activeTexture(this.gl.TEXTURE0 + slot);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+  }
+  createDataTexture(name, slot, width, height, pixels) {
+    // Missing typescript?
+    if(typeof name !== 'string') throw new Error('string_name_only');
+    if(typeof slot !== 'number') throw new Error('number_slot_only');
+    if(typeof width !== 'number') throw new Error('number_width');
+    if(typeof height !== 'number') throw new Error('number_height_only');
+    if(!(pixels instanceof Uint8Array)) throw new Error('Uint8Array_pixels_only');
+    this._createTexture(name, slot);
+    this.gl.texImage2D(
+      this.gl.TEXTURE_2D,
+      0,
+      this.gl.RGBA, width, height, 0,
+      this.gl.RGBA, this.gl.UNSIGNED_BYTE,
+      pixels
+    );
+  }
+  updateDataTexture(slot, width, height, pixels) {
+    this.gl.activeTexture(this.gl.TEXTURE0 + slot);
+    this.gl.texImage2D(
+      this.gl.TEXTURE_2D,
+      0,
+      this.gl.RGBA, width, height, 0,
+      this.gl.RGBA, this.gl.UNSIGNED_BYTE,
+      pixels
+    );
+  }
+  createImageTexture(name, slot, image) {
+    if(typeof name !== 'string') throw new Error('string_name_only');
+    if(typeof slot !== 'number') throw new Error('number_slot_only');
+    if(!(image instanceof Image)) throw new Error('image_required');
+    this._createTexture(name, slot);
+    this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA,this.gl.UNSIGNED_BYTE, image);
   }
 }
 

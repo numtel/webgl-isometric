@@ -122,6 +122,24 @@ class TMXLayer {
     this.width = parseInt(el.getAttribute('width'), 10);
     this.height = parseInt(el.getAttribute('height'), 10);
 
+    this.properties = {};
+    el.querySelectorAll('properties property').forEach(prop => {
+      const type = prop.getAttribute('type');
+      const value = prop.getAttribute('value');
+      const name = prop.getAttribute('name');
+      let retVal;
+      switch(type) {
+        case 'bool':
+          this.properties[name] = value === 'true';
+          break;
+        case 'int':
+          this.properties[name] = parseInt(value, 10);
+          break;
+        default:
+          this.properties[name] = value;
+      }
+    });
+
     // TODO: support layers that don't fill the map
     if(this.width !== parent.width || this.height !== parent.height)
       throw new Error('layer_size_mismatch');
