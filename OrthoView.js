@@ -1,10 +1,9 @@
 import DataChannel from './DataChannel.js';
 
-export default class IsoView {
+export default class OrthoView {
   constructor(options) {
     this.options = Object.assign({
       fullPage: false,
-      extraUniforms: [],
       dataValues: {},
       chunkMap: {},
       tileSizeMin: 3,
@@ -27,34 +26,35 @@ export default class IsoView {
     const dataValues = Object.entries(Object.assign({
       CANVAS_WIDTH: this.element.width,
       CANVAS_HEIGHT: this.element.height,
+      ORIGIN_X: 0,
+      ORIGIN_Y: 0,
       TILE_SIZE: 60,
       TILE_SIZE_Y: 0.5, // legacy? height proportional to width in isometric
       CURSOR_X: 0,
       CURSOR_Y: 0,
-      CURSOR_SIZE: 20,
-      ORIGIN_X: 200,
-      ORIGIN_Y: 100,
     }, this.options.dataValues));
 
-    const dataValuesArray = new Float32Array(dataValues.length);
-    const mainChannel = new DataChannel('_data', dataValuesArray);
+    this.dataLocation = null;
+    this.DATA_UNIFORM_NAME = '_data';
+    const dataValuesArray = this.dataValues = new Float32Array(dataValues.length);
     const dataValuesChunks = [ `uniform float _data[${dataValuesArray.length}];` ];
     for(let i=0; i<dataValues.length;i++) {
       const val = dataValues[i];
+      // Set initial value
       dataValuesArray[i] = val[1];
+      // Easy access from shader
       dataValuesChunks.push(`#define ${val[0]} _data[${i}]`);
+      // Easy access on this object
       Object.defineProperty(this, val[0], {
         get() {
           return dataValuesArray[i];
         },
         set(value) {
           dataValuesArray[i] = value;
-          mainChannel.isDirty = true;
         }
       })
     }
     this.dataValuesChunk = dataValuesChunks.join('\n') + '\n';
-    this.uniforms = [ mainChannel ].concat(this.options.extraUniforms);
   }
   async init() {
     this.gl = this.element.getContext('webgl');
@@ -82,7 +82,6 @@ export default class IsoView {
       precision highp float;
       precision highp int;
       #endif
-
     ` + this.dataValuesChunk
       + replaceChunks(
       await (await fetch(this.options.fragmentShader)).text(), this.options.chunkMap);
@@ -90,9 +89,12 @@ export default class IsoView {
     this.gl.compileShader(fragmentShader);
 
     if(!this.gl.getShaderParameter(fragmentShader, this.gl.COMPILE_STATUS)) {
-      console.log(fragmentShaderText.split('\n').map((line, index) => {
-        return index + ': ' + line;
-      }).join('\n'));
+      console.log(
+        fragmentShaderText
+          .split('\n')
+          .map((line, index) => (index+1) + ': ' + line)
+          .join('\n')
+      );
       throw this.gl.getShaderInfoLog(fragmentShader);
     }
 
@@ -129,6 +131,8 @@ export default class IsoView {
     const uvLocation = this.gl.getAttribLocation(this.program, 'uv');
     this.gl.vertexAttribPointer(uvLocation, 2, this.gl.FLOAT, false, 0, 0);
     this.gl.enableVertexAttribArray(1);
+
+    this.dataLocation = this.gl.getUniformLocation(this.program, this.DATA_UNIFORM_NAME);
 
 
     let touchStartPos = null;
@@ -268,7 +272,7 @@ export default class IsoView {
 
 
     const draw = () => {
-      for(let uniform of this.uniforms) uniform.update(this);
+      this.gl.uniform1fv(this.dataLocation, this.dataValues);
       this.gl.clear(this.gl.COLOR_BUFFER_BIT);
       this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
       window.requestAnimationFrame(draw);

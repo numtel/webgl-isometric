@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.4" tiledversion="1.4.1" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="16" tileheight="16" infinite="0" nextlayerid="15" nextobjectid="14">
  <tileset firstgid="1" name="Overworld" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
-  <image source="Overworld.png" width="1024" height="1024"/>
+  <image source="assets/Overworld.png" width="1024" height="1024"/>
  </tileset>
  <tileset firstgid="4097" name="character" tilewidth="16" tileheight="16" tilecount="32" columns="4">
   <grid orientation="orthogonal" width="16" height="32"/>
-  <image source="NPC_test.png" width="64" height="128"/>
+  <image source="assets/NPC_test.png" width="64" height="128"/>
  </tileset>
  <layer id="1" name="ground" width="100" height="100">
   <data encoding="csv">

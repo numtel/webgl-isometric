@@ -1,4 +1,4 @@
-import IsoView from './IsoView.js';
+import OrthoView from './OrthoView.js';
 import TMXMap from './TMXMap.js';
 
 
@@ -6,11 +6,17 @@ import TMXMap from './TMXMap.js';
   const map = new TMXMap;
   await map.load('zeldish.tmx');
 
-  const game = new IsoView({
+  const game = window.game = new OrthoView({
     fullPage: true,
     dataValues: {
-      CHAR_X: 5.0,
-      CHAR_Y: 5.0,
+      // Override defaults
+      ORIGIN_X: -820,
+      ORIGIN_Y: -90,
+      TILE_SIZE: 16,
+      // Custom values
+      CURSOR_SIZE: 20,
+      CHAR_X: 70.0,
+      CHAR_Y: 15.0,
       CHAR_TILE_X: 0,
       CHAR_TILE_Y: 0,
       MAP_WIDTH: 100,
