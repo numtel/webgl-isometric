@@ -13,38 +13,30 @@ bool is_cursor(vec2 px) {
   return abs(px.x - CURSOR_X) < CURSOR_SIZE && abs(px.y - CURSOR_Y) < CURSOR_SIZE;
 }
 
-vec4 calc_px_tile(vec2 px) {
-  vec2 raw = px - vec2(ORIGIN_X, ORIGIN_Y);
-  return vec4(
-    floor(raw.x / TILE_SIZE),
-    floor(raw.y / TILE_SIZE),
-    mod(raw.x, TILE_SIZE),
-    mod(raw.y, TILE_SIZE)
+vec2 calc_cursor_tile() {
+  vec2 cursor_raw = vec2(CURSOR_X - ORIGIN_X, CURSOR_Y - ORIGIN_Y);
+  return vec2(
+    cursor_raw.x / TILE_SIZE,
+    cursor_raw.y / TILE_SIZE
   );
 }
 
-vec4 calc_cursor_tile() {
-  vec2 cursor_raw = vec2(CURSOR_X - ORIGIN_X, CURSOR_Y - ORIGIN_Y);
-  return vec4(
-    floor(cursor_raw.x / TILE_SIZE),
-    floor(cursor_raw.y / TILE_SIZE),
-    mod(cursor_raw.x, TILE_SIZE),
-    mod(cursor_raw.y, TILE_SIZE)
+vec2 calc_tile(vec2 px) {
+  vec2 tile_raw = px - vec2(ORIGIN_X, ORIGIN_Y);
+  return vec2(
+    tile_raw.x / TILE_SIZE,
+    tile_raw.y / TILE_SIZE
   );
 }
 
 void main() {
   vec2 px = screen_px();
-  vec4 tile = calc_px_tile(px);
-  vec4 cursor_tile = calc_cursor_tile();
+  vec2 tile_real = calc_tile(px);
+  vec2 cursor_tile = calc_cursor_tile();
 
   vec3 comp = vec3(0., 0.2, 0.);
 
-  if(tile.x >= 0. && tile.y >= 0. && tile.x <= 99. && tile.y <= 99.) {
-    vec2 tile_real = vec2(
-      tile.x + (tile.z / TILE_SIZE),
-      tile.y + (tile.w / TILE_SIZE)
-    );
+  if(tile_real.x >= 0. && tile_real.y >= 0. && tile_real.x <= 99. && tile_real.y <= 99.) {
     // Below character layers
     vec4 under_char = texture2D(u_under_char, vec2(
       tile_real.x / MAP_WIDTH,
@@ -91,10 +83,10 @@ void main() {
     }
 
   }
-  if(tile.x == cursor_tile.x && tile.y == cursor_tile.y) {
+
+  if(floor(tile_real) == floor(cursor_tile)) {
     comp.g = 1.;
   }
-
 
   if(is_cursor(px)) {
     comp.r = 1.;
