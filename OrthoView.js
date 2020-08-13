@@ -1,5 +1,3 @@
-import DataChannel from './DataChannel.js';
-
 export default class OrthoView {
   constructor(options) {
     this.options = Object.assign({
@@ -133,6 +131,7 @@ export default class OrthoView {
     this.gl.enableVertexAttribArray(1);
 
     this.dataLocation = this.gl.getUniformLocation(this.program, this.DATA_UNIFORM_NAME);
+    this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
 
 
     let touchStartPos = null;
@@ -292,10 +291,6 @@ export default class OrthoView {
   }
   createDataTexture(name, slot, width, height, pixels) {
     // Missing typescript?
-    if(typeof name !== 'string') throw new Error('string_name_only');
-    if(typeof slot !== 'number') throw new Error('number_slot_only');
-    if(typeof width !== 'number') throw new Error('number_width');
-    if(typeof height !== 'number') throw new Error('number_height_only');
     if(!(pixels instanceof Uint8Array)) throw new Error('Uint8Array_pixels_only');
     this._createTexture(name, slot);
     this.gl.texImage2D(
@@ -317,9 +312,6 @@ export default class OrthoView {
     );
   }
   createImageTexture(name, slot, image) {
-    if(typeof name !== 'string') throw new Error('string_name_only');
-    if(typeof slot !== 'number') throw new Error('number_slot_only');
-    if(!(image instanceof Image)) throw new Error('image_required');
     this._createTexture(name, slot);
     this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA,this.gl.UNSIGNED_BYTE, image);
   }

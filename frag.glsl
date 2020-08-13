@@ -33,10 +33,10 @@ vec4 calc_cursor_tile() {
   );
 }
 
-vec4 drawLayer(vec4 tile, vec2 dimensionMultiplier, vec2 quadOffset, sampler2D texture) {
+vec4 drawLayer(vec4 tile, sampler2D texture) {
   vec4 tileset_coord = texture2D(texture, vec2(
-    ((tile.x+0.01) / (MAP_WIDTH * dimensionMultiplier.x)) + quadOffset.x,
-    ((tile.y+0.01) / (MAP_WIDTH * dimensionMultiplier.y)) + quadOffset.y
+    (tile.x+0.01) / MAP_WIDTH,
+    (tile.y+0.01) / MAP_WIDTH
   )).rgba;
 
   if(tileset_coord.a > 0.5) {
@@ -55,25 +55,50 @@ void main() {
   vec3 comp = vec3(0., 0.2, 0.);
 
   if(tile.x >= 0. && tile.y >= 0. && tile.x <= 99. && tile.y <= 99.) {
-    vec4 layer0 = drawLayer(tile, vec2(2.,2.), vec2(0.,0.), u_layer0);
-    if(layer0.a > 0.5) {
-      comp.rgb = layer0.rgb;
+    vec2 tile_real = vec2(
+      tile.x + (tile.z / TILE_SIZE),
+      tile.y + (tile.w / TILE_SIZE)
+    );
+    // Below character layers
+    vec4 under_char = texture2D(u_under_char, vec2(
+      tile_real.x / MAP_WIDTH,
+      tile_real.y / MAP_HEIGHT
+    )).rgba;
+    if(under_char.a > 0.5) {
+      comp.rgb = under_char.rgb;
     }
-    vec4 layer1 = drawLayer(tile, vec2(2.,2.), vec2(0.5,0.), u_layer0);
-    if(layer1.a > 0.5) {
-      comp.rgb = layer1.rgb;
-    }
-    vec4 layer2 = drawLayer(tile, vec2(2.,2.), vec2(0.,0.5), u_layer0);
-    if(layer2.a > 0.5) {
-      comp.rgb = layer2.rgb;
-    }
-    vec4 layer3 = drawLayer(tile, vec2(2.,2.), vec2(0.5,0.5), u_layer0);
-    if(layer3.a > 0.5) {
-      comp.rgb = layer3.rgb;
-    }
-    vec4 layer_anim = drawLayer(tile, vec2(1.,1.), vec2(0.,0.), u_anim);
+
+    // Below character animation layers
+    vec4 layer_anim = drawLayer(tile, u_anim);
     if(layer_anim.a > 0.5) {
       comp.rgb = layer_anim.rgb;
+    }
+    // Draw character
+    const vec2 CHAR_HALFSIZE=vec2(0.5,1.);
+    if((abs(tile_real.x - CHAR_X) < CHAR_HALFSIZE.x)
+        && (abs(tile_real.y - CHAR_Y) < CHAR_HALFSIZE.y)) {
+
+      vec2 tileset_coord = vec2(
+        tile_real.x - CHAR_X + CHAR_HALFSIZE.x,
+        tile_real.y - CHAR_Y + CHAR_HALFSIZE.y
+      );
+
+      vec4 char = texture2D(u_texture1, vec2(
+        ((tileset_coord.x/CHAR_HALFSIZE.x/2.)+CHAR_TILE_X)/TILESET1_COLUMNS,
+        ((tileset_coord.y/CHAR_HALFSIZE.y/2.)+CHAR_TILE_Y)/TILESET1_ROWS
+      )).rgba;
+
+      if(char.a > 0.5) {
+        comp.rgb = char.rgb;
+      }
+    }
+    // Above character layers
+    vec4 above_char = texture2D(u_above_char, vec2(
+      tile_real.x / MAP_WIDTH,
+      tile_real.y / MAP_HEIGHT
+    )).rgba;
+    if(above_char.a > 0.5) {
+      comp.rgb = above_char.rgb;
     }
 
   }
@@ -81,29 +106,6 @@ void main() {
     comp.g = 1.;
   }
 
-  // Draw character
-  vec2 tile_real = vec2(
-    tile.x + (tile.z / TILE_SIZE),
-    tile.y + (tile.w / TILE_SIZE)
-  );
-  const vec2 CHAR_HALFSIZE=vec2(0.5,1.);
-  if((abs(tile_real.x - CHAR_X) < CHAR_HALFSIZE.x)
-      && (abs(tile_real.y - CHAR_Y) < CHAR_HALFSIZE.y)) {
-
-    vec2 tileset_coord = vec2(
-      tile_real.x - CHAR_X + CHAR_HALFSIZE.x,
-      tile_real.y - CHAR_Y + CHAR_HALFSIZE.y
-    );
-
-    vec4 char = texture2D(u_texture1, vec2(
-      ((tileset_coord.x/CHAR_HALFSIZE.x/2.)+CHAR_TILE_X)/TILESET1_COLUMNS,
-      ((tileset_coord.y/CHAR_HALFSIZE.y/2.)+CHAR_TILE_Y)/TILESET1_ROWS
-    )).rgba;
-
-    if(char.a > 0.5) {
-      comp.rgb = char.rgb;
-    }
-  }
 
   if(is_cursor(px)) {
     comp.r = 1.;

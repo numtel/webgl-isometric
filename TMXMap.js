@@ -55,19 +55,26 @@ export default class TMXMap {
         return tileSet;
     }
   }
-  draw() {
+  draw(layerFilterFun) {
+    // TODO support layer tinting
     if(!this.loaded) throw new Error('load_required');
-    for(let y=0; y<this.height; y++) {
-      for(let x=0; x<this.width; x++) {
-        const tileNum = (y * this.height) + x;
-        for(let i=0; i<this.layers.length; i++) {
+
+    const canvas = document.createElement('canvas');
+    canvas.width = this.width * this.tileHeight;
+    canvas.height = this.height * this.tileHeight;
+    const ctx = canvas.getContext('2d');
+    for(let i=0; i<this.layers.length; i++) {
+      if(layerFilterFun && !layerFilterFun(this.layers[i], i)) continue;
+      for(let y=0; y<this.height; y++) {
+        for(let x=0; x<this.width; x++) {
+          const tileNum = (y * this.height) + x;
           const tileGid = this.layers[i].data[tileNum];
           if(tileGid === 0) continue;
           const tileSet = this.getTileSet(tileGid);
           const tileSetIndex = tileGid - tileSet.firstgid;
           const tileX = tileSetIndex % tileSet.columns;
           const tileY = Math.floor(tileSetIndex / tileSet.columns);
-          this.ctx.drawImage(
+          ctx.drawImage(
             tileSet.image,
             tileX * tileSet.tileWidth,
             tileY * tileSet.tileHeight,
@@ -80,6 +87,7 @@ export default class TMXMap {
         }
       }
     }
+    return canvas;
   }
 }
 

@@ -1,9 +1,11 @@
 import OrthoView from './OrthoView.js';
 import TMXMap from './TMXMap.js';
 
+import { buildLayers } from './helpers.js';
+
 
 (async function() {
-  const map = new TMXMap;
+  const map = window.map = new TMXMap;
   await map.load('zeldish.tmx');
 
   const game = window.game = new OrthoView({
@@ -28,7 +30,8 @@ import TMXMap from './TMXMap.js';
     },
     chunkMap: {
       map_uniforms: [
-          'uniform sampler2D u_layer0;',
+          'uniform sampler2D u_under_char;',
+          'uniform sampler2D u_above_char;',
           'uniform sampler2D u_anim;',
         ].concat(map.tileSets.map((ts, index) => {
           return `uniform sampler2D u_texture${index};`;
@@ -77,75 +80,41 @@ import TMXMap from './TMXMap.js';
     }
   }
 
-  // Tile data for the lowest 4 layers of TMX
-  function lay0() {
-    game.gl.pixelStorei(game.gl.UNPACK_ALIGNMENT, 1);
-    const pixels = [];
-    // TODO aggregate more than 4 layers into 4 layers of sprites per tile
-    for(let l=0; l<4; l+=2) {
-      for(let y=0; y<map.layers[l].height; y++) {
-        for(let x=0; x<map.layers[l].width; x++){
-          const tilegid = map.layers[l].data[x+(y*map.layers[l].width)];
-          const columns = 64;
-          if(tilegid === 0) {
-            pixels.push(0,0,0,0);
-          } else {
-            pixels.push((tilegid-1) % columns, Math.floor((tilegid-1) / columns), 0, 255);
-          }
-        }
-        for(let x=0; x<map.layers[l].width; x++){
-          const tilegid = map.layers[l+1].data[x+(y*map.layers[l].width)];
-          const columns = 64;
-          if(tilegid === 0) {
-            pixels.push(0,0,0,0);
-          } else {
-            pixels.push((tilegid-1) % columns, Math.floor((tilegid-1) / columns), 0, 255);
-          }
-        }
-      }
-    }
-    game.createDataTexture(
-      'u_layer0', 0,
-      map.layers[0].width * 2, map.layers[0].height * 2,
-      new Uint8Array(pixels)
-    );
-  }
-  lay0();
-
   // Aggregate all animated frames into a single layer
   let frameCount = 0;
-  let animData = new Uint8Array(map.width * map.height * 4);
-  game.createDataTexture('u_anim', 1, map.width, map.height, animData);
-  function animationLayer() {
-    for(let l=0; l<map.layers.length; l++) {
-      const { frame, frame_max } = map.layers[l].properties;
-      if(!frame || !frame_max || frame-1 !== frameCount % frame_max) continue;
-      for(let y=0; y<map.layers[l].height; y++) {
-        for(let x=0; x<map.layers[l].width; x++){
-          const pos = x+(y*map.layers[l].width);
-          const tilegid = map.layers[l].data[pos];
-          const columns = 64;
-          if(tilegid !== 0) {
-            animData[pos * 4] = (tilegid-1) % columns;
-            animData[pos * 4 + 1] = Math.floor((tilegid-1) / columns);
-            animData[pos * 4 + 2] = 0;
-            animData[pos * 4 + 3] = 255;
-          }
-        }
-      }
+  function animationLayer(init=false) {
+    let animData = buildLayers(map, 1, (layer) => {
+      const { frame, frame_max } = layer.properties;
+      if(!frame || !frame_max || frame-1 !== frameCount % frame_max) return false;
+      return true;
+    });
+    if(init) {
+      game.createDataTexture('u_anim', 2, map.width, map.height, animData[0]);
+    } else {
+      game.updateDataTexture(2, map.width, map.height, animData[0]);
     }
-    game.updateDataTexture(1, map.width, map.height, animData);
     frameCount++;
     if(frameCount > game.options.maxFrameCount) frameCount = 0;
     setTimeout(animationLayer, 200);
   }
-  animationLayer();
+  animationLayer(true);
 
+  // Prerendered under/over aggregates
+  const underCharCanvas = map.draw((layer, index) =>
+    !layer.properties.frame && !layer.properties.aboveChar)
+  game.createImageTexture('u_under_char', 3, underCharCanvas);
 
+  const aboveCharCanvas = map.draw((layer, index) =>
+    !layer.properties.frame && layer.properties.aboveChar)
+  game.createImageTexture('u_above_char', 4, aboveCharCanvas);
+
+  // Tileset images from tmx file
   for(let i=0; i<map.tileSets.length; i++) {
     const tileSet = map.tileSets[i];
-    game.createImageTexture('u_texture' + i, i+2, tileSet.image);
+    game.createImageTexture('u_texture' + i, i+5, tileSet.image);
   }
+
+
 
 
   document.body.append(game.element);
