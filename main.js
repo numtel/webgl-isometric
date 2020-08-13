@@ -1,9 +1,6 @@
 import OrthoView from './OrthoView.js';
 import TMXMap from './TMXMap.js';
 
-import { buildLayers } from './helpers.js';
-
-
 (async function() {
   const map = window.map = new TMXMap;
   await map.load('zeldish.tmx');
@@ -82,19 +79,18 @@ import { buildLayers } from './helpers.js';
 
   // Aggregate all animated frames into a single layer
   let frameCount = 0;
+  const animFilter = (layer) => {
+    const { frame, frame_max } = layer.properties;
+    if(!frame || !frame_max || frame-1 !== frameCount % frame_max) return false;
+    return true;
+  };
+  const animCanvas = map.draw(animFilter);
+  game.createImageTexture('u_anim', 0, animCanvas);
   function animationLayer(init=false) {
-    let animData = buildLayers(map, 1, (layer) => {
-      const { frame, frame_max } = layer.properties;
-      if(!frame || !frame_max || frame-1 !== frameCount % frame_max) return false;
-      return true;
-    });
-    if(init) {
-      game.createDataTexture('u_anim', 2, map.width, map.height, animData[0]);
-    } else {
-      game.updateDataTexture(2, map.width, map.height, animData[0]);
-    }
+    map.draw(animFilter, animCanvas);
+    game.updateImageTexture(0, animCanvas);
     frameCount++;
-    if(frameCount > game.options.maxFrameCount) frameCount = 0;
+    if(frameCount > Math.pow(2,32) - 1) frameCount = 0;
     setTimeout(animationLayer, 200);
   }
   animationLayer(true);
@@ -102,16 +98,16 @@ import { buildLayers } from './helpers.js';
   // Prerendered under/over aggregates
   const underCharCanvas = map.draw((layer, index) =>
     !layer.properties.frame && !layer.properties.aboveChar)
-  game.createImageTexture('u_under_char', 3, underCharCanvas);
+  game.createImageTexture('u_under_char', 1, underCharCanvas);
 
   const aboveCharCanvas = map.draw((layer, index) =>
     !layer.properties.frame && layer.properties.aboveChar)
-  game.createImageTexture('u_above_char', 4, aboveCharCanvas);
+  game.createImageTexture('u_above_char', 2, aboveCharCanvas);
 
   // Tileset images from tmx file
   for(let i=0; i<map.tileSets.length; i++) {
     const tileSet = map.tileSets[i];
-    game.createImageTexture('u_texture' + i, i+5, tileSet.image);
+    game.createImageTexture('u_texture' + i, i+3, tileSet.image);
   }
 
 

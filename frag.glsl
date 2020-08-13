@@ -33,20 +33,6 @@ vec4 calc_cursor_tile() {
   );
 }
 
-vec4 drawLayer(vec4 tile, sampler2D texture) {
-  vec4 tileset_coord = texture2D(texture, vec2(
-    (tile.x+0.01) / MAP_WIDTH,
-    (tile.y+0.01) / MAP_WIDTH
-  )).rgba;
-
-  if(tileset_coord.a > 0.5) {
-    return texture2D(u_texture0, vec2(
-      ((tile.z/TILE_SIZE)+(tileset_coord.x*255.))/TILESET0_COLUMNS,
-      ((tile.w/TILE_SIZE)+(tileset_coord.y*255.))/TILESET0_ROWS
-    )).rgba;
-  }
-}
-
 void main() {
   vec2 px = screen_px();
   vec4 tile = calc_px_tile(px);
@@ -69,7 +55,10 @@ void main() {
     }
 
     // Below character animation layers
-    vec4 layer_anim = drawLayer(tile, u_anim);
+    vec4 layer_anim = texture2D(u_anim, vec2(
+      tile_real.x / MAP_WIDTH,
+      tile_real.y / MAP_HEIGHT
+    )).rgba;
     if(layer_anim.a > 0.5) {
       comp.rgb = layer_anim.rgb;
     }

@@ -5,7 +5,6 @@ export default class OrthoView {
       dataValues: {},
       chunkMap: {},
       tileSizeMin: 3,
-      maxFrameCount: Math.pow(2,32) - 1,
       fragmentShader: 'frag.glsl',
       onTapOrClick: null,
     }, options);
@@ -76,10 +75,8 @@ export default class OrthoView {
 
     const fragmentShader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
     const fragmentShaderText = `
-      #ifdef GL_ES
       precision highp float;
       precision highp int;
-      #endif
     ` + this.dataValuesChunk
       + replaceChunks(
       await (await fetch(this.options.fragmentShader)).text(), this.options.chunkMap);
@@ -313,6 +310,10 @@ export default class OrthoView {
   }
   createImageTexture(name, slot, image) {
     this._createTexture(name, slot);
+    this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA,this.gl.UNSIGNED_BYTE, image);
+  }
+  updateImageTexture(slot, image) {
+    this.gl.activeTexture(this.gl.TEXTURE0 + slot);
     this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA,this.gl.UNSIGNED_BYTE, image);
   }
 }

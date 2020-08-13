@@ -55,14 +55,17 @@ export default class TMXMap {
         return tileSet;
     }
   }
-  draw(layerFilterFun) {
+  draw(layerFilterFun, canvas) {
     // TODO support layer tinting
     if(!this.loaded) throw new Error('load_required');
 
-    const canvas = document.createElement('canvas');
-    canvas.width = this.width * this.tileHeight;
-    canvas.height = this.height * this.tileHeight;
+    if(!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.width = this.width * this.tileHeight;
+      canvas.height = this.height * this.tileHeight;
+    }
     const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     for(let i=0; i<this.layers.length; i++) {
       if(layerFilterFun && !layerFilterFun(this.layers[i], i)) continue;
       for(let y=0; y<this.height; y++) {
