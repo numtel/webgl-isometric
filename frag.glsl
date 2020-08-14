@@ -29,6 +29,13 @@ vec2 calc_tile(vec2 px) {
   );
 }
 
+vec3 blend(vec3 bottom, vec4 top) {
+  bottom.r = (bottom.r * (1.-top.a)) + (top.r * top.a);
+  bottom.g = (bottom.g * (1.-top.a)) + (top.g * top.a);
+  bottom.b = (bottom.b * (1.-top.a)) + (top.b * top.a);
+  return bottom;
+}
+
 void main() {
   vec2 px = screen_px();
   vec2 tile_real = calc_tile(px);
@@ -42,18 +49,15 @@ void main() {
       tile_real.x / MAP_WIDTH,
       tile_real.y / MAP_HEIGHT
     )).rgba;
-    if(under_char.a > 0.5) {
-      comp.rgb = under_char.rgb;
-    }
+    comp = blend(comp, under_char);
 
     // Below character animation layers
     vec4 layer_anim = texture2D(u_anim, vec2(
       tile_real.x / MAP_WIDTH,
       tile_real.y / MAP_HEIGHT
     )).rgba;
-    if(layer_anim.a > 0.5) {
-      comp.rgb = layer_anim.rgb;
-    }
+    comp = blend(comp, layer_anim);
+
     // Draw character
     if((abs(tile_real.x - CHAR_X - CHAR_HALF_X) < CHAR_HALF_X)
         && (abs(tile_real.y - CHAR_Y) < CHAR_HALF_Y)) {
@@ -68,18 +72,14 @@ void main() {
         ((tileset_coord.y/CHAR_HALF_Y/2.)+CHAR_TILE_Y)/TILESET_CHAR_ROWS
       )).rgba;
 
-      if(char.a > 0.5) {
-        comp.rgb = char.rgb;
-      }
+      comp = blend(comp, char);
     }
     // Above character layers
     vec4 above_char = texture2D(u_above_char, vec2(
       tile_real.x / MAP_WIDTH,
       tile_real.y / MAP_HEIGHT
     )).rgba;
-    if(above_char.a > 0.5) {
-      comp.rgb = above_char.rgb;
-    }
+    comp = blend(comp, above_char);
 
   }
 
