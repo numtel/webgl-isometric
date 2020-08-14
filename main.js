@@ -32,6 +32,7 @@ import { astar, Graph } from './astar.js';
           'uniform sampler2D u_under_char;',
           'uniform sampler2D u_above_char;',
           'uniform sampler2D u_anim;',
+          'uniform sampler2D u_anim_above;',
           'uniform sampler2D u_char;',
         ].join('\n'),
     },
@@ -113,16 +114,25 @@ import { astar, Graph } from './astar.js';
 
   // Aggregate all animated frames into a single layer
   let frameCount = 0;
-  const animFilter = (layer) => {
-    const { frame, frame_max } = layer.properties;
-    if(!frame || !frame_max || frame-1 !== frameCount % frame_max) return false;
+  const animFilterBelow = (layer) => {
+    const { frame, frame_max, aboveChar } = layer.properties;
+    if(aboveChar || !frame || !frame_max || frame-1 !== frameCount % frame_max) return false;
     return true;
   };
-  const animCanvas = map.draw(animFilter);
-  game.createImageTexture('u_anim', 0, animCanvas);
+  const animCanvasBelow = map.draw(animFilterBelow);
+  game.createImageTexture('u_anim', 0, animCanvasBelow);
+  const animFilterAbove = (layer) => {
+    const { frame, frame_max, aboveChar } = layer.properties;
+    if(!aboveChar || !frame || !frame_max || frame-1 !== frameCount % frame_max) return false;
+    return true;
+  };
+  const animCanvasAbove = map.draw(animFilterAbove);
+  game.createImageTexture('u_anim_above', 1, animCanvasAbove);
   function animationLayer(init=false) {
-    map.draw(animFilter, animCanvas);
-    game.updateImageTexture(0, animCanvas);
+    map.draw(animFilterBelow, animCanvasBelow);
+    game.updateImageTexture(0, animCanvasBelow);
+    map.draw(animFilterAbove, animCanvasAbove);
+    game.updateImageTexture(1, animCanvasAbove);
     frameCount++;
     if(frameCount > Math.pow(2,32) - 1) frameCount = 0;
     setTimeout(animationLayer, 200);
@@ -132,17 +142,17 @@ import { astar, Graph } from './astar.js';
   // Prerendered under/over aggregates
   const underCharCanvas = map.draw((layer, index) =>
     !layer.properties.frame && !layer.properties.aboveChar)
-  game.createImageTexture('u_under_char', 1, underCharCanvas);
+  game.createImageTexture('u_under_char', 2, underCharCanvas);
 
   const aboveCharCanvas = map.draw((layer, index) =>
     !layer.properties.frame && layer.properties.aboveChar)
-  game.createImageTexture('u_above_char', 2, aboveCharCanvas);
+  game.createImageTexture('u_above_char', 3, aboveCharCanvas);
 
   // Character tileset image from tmx file
   for(let i=0; i<map.tileSets.length; i++) {
     const tileSet = map.tileSets[i];
     if(tileSet.name === 'character') {
-      game.createImageTexture('u_char', 3, tileSet.image);
+      game.createImageTexture('u_char', 4, tileSet.image);
       break;
     }
   }

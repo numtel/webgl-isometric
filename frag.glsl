@@ -44,18 +44,17 @@ void main() {
   vec3 comp = vec3(0., 0.2, 0.);
 
   if(tile_real.x >= 0. && tile_real.y >= 0. && tile_real.x <= 99. && tile_real.y <= 99.) {
-    // Below character layers
-    vec4 under_char = texture2D(u_under_char, vec2(
+    vec2 layer_pos = vec2(
       tile_real.x / MAP_WIDTH,
       tile_real.y / MAP_HEIGHT
-    )).rgba;
+    );
+
+    // Below character layers
+    vec4 under_char = texture2D(u_under_char, layer_pos).rgba;
     comp = blend(comp, under_char);
 
     // Below character animation layers
-    vec4 layer_anim = texture2D(u_anim, vec2(
-      tile_real.x / MAP_WIDTH,
-      tile_real.y / MAP_HEIGHT
-    )).rgba;
+    vec4 layer_anim = texture2D(u_anim, layer_pos).rgba;
     comp = blend(comp, layer_anim);
 
     // Draw character
@@ -75,11 +74,12 @@ void main() {
       comp = blend(comp, char);
     }
     // Above character layers
-    vec4 above_char = texture2D(u_above_char, vec2(
-      tile_real.x / MAP_WIDTH,
-      tile_real.y / MAP_HEIGHT
-    )).rgba;
+    vec4 above_char = texture2D(u_above_char, layer_pos).rgba;
     comp = blend(comp, above_char);
+
+    // Above character animation layers
+    vec4 layer_anim_above = texture2D(u_anim_above, layer_pos).rgba;
+    comp = blend(comp, layer_anim_above);
 
   }
 
