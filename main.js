@@ -7,21 +7,12 @@ async function loadGame(mapFile) {
   const map = new TMXMap;
   await map.load(mapFile);
 
-  let charTileSet;
-  for(let i=0; i<map.tileSets.length; i++) {
-    const tileSet = map.tileSets[i];
-    if(tileSet.name === 'character') {
-      charTileSet = tileSet;
-      break;
-    }
-  }
+  const charTileSet = map.tileSets.find(ts => ts.name === 'character');;
 
   const game = new OrthoView({
     fullPage: true,
     dataValues: {
-      // Override defaults
-      ORIGIN_X: -820,
-      ORIGIN_Y: -90,
+      // Override default
       TILE_SIZE: 32,
       // Custom values
       CHAR_X: map.properties.initCharX,
