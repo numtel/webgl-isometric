@@ -92,6 +92,23 @@ export default class TMXMap {
     }
     return canvas;
   }
+  tileMap(layerFilterFun) {
+    const out = new Array(this.height);
+    for(let i=0; i<this.layers.length; i++) {
+      if(layerFilterFun && !layerFilterFun(this.layers[i], i)) continue;
+      for(let y=0; y<this.height; y++) {
+        if(out[y] === undefined) out[y] = new Array(this.width);
+        for(let x=0; x<this.width; x++) {
+          const tileNum = (y * this.height) + x;
+          const tileGid = this.layers[i].data[tileNum];
+          if(out[y][x] === undefined) out[y][x] = 1;
+          if(tileGid === 0) continue;
+          out[y][x] = 0;
+        }
+      }
+    }
+    return out;
+  }
 }
 
 class TMXTileSet {
@@ -99,6 +116,7 @@ class TMXTileSet {
     this.parent = parent;
     this.el = el;
     this.image = null;
+    this.name = el.getAttribute('name');
     this.firstgid = parseInt(el.getAttribute('firstgid'), 10);
     this.tileWidth = parseInt(el.getAttribute('tilewidth'), 10);
     this.tileHeight = parseInt(el.getAttribute('tileheight'), 10);

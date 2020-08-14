@@ -1,6 +1,8 @@
 import OrthoView from './OrthoView.js';
 import TMXMap from './TMXMap.js';
 
+import { astar, Graph } from './astar.js';
+
 (async function() {
   const map = window.map = new TMXMap;
   await map.load('zeldish.tmx');
@@ -14,67 +16,99 @@ import TMXMap from './TMXMap.js';
       TILE_SIZE: 16,
       // Custom values
       CURSOR_SIZE: 20,
-      CHAR_X: 70.0,
-      CHAR_Y: 15.0,
+      CHAR_X: 70,
+      CHAR_Y: 15,
       CHAR_TILE_X: 0,
       CHAR_TILE_Y: 0,
+      CHAR_HALF_X: 0.5,
+      CHAR_HALF_Y: 1,
       MAP_WIDTH: 100,
       MAP_HEIGHT: 100,
-      TILESET0_COLUMNS: 64,
-      TILESET0_ROWS: 64,
-      TILESET1_COLUMNS: 4,
-      TILESET1_ROWS: 4,
+      TILESET_CHAR_COLUMNS: 4,
+      TILESET_CHAR_ROWS: 4,
     },
     chunkMap: {
       map_uniforms: [
           'uniform sampler2D u_under_char;',
           'uniform sampler2D u_above_char;',
           'uniform sampler2D u_anim;',
-        ].concat(map.tileSets.map((ts, index) => {
-          return `uniform sampler2D u_texture${index};`;
-        })).join('\n'),
+          'uniform sampler2D u_char;',
+        ].join('\n'),
     },
     onTapOrClick(event, tilePos) {
       if(activeCharAnim) {
         clearTimeout(activeCharAnim);
         activeCharAnim = null;
       }
-      animateCharPos(tilePos);
+      moveCharacter(tilePos);
     },
   });
   await game.init();
 
   let activeCharAnim;
-  // thisDirection: corresponds with tileset graphic y (row) value for top tile
-  function animateCharPos(finalTilePos, thisDirection=null) {
-    const xDist = game.CHAR_X - finalTilePos.x;
-    const yDist = game.CHAR_Y - finalTilePos.y;
-    const dist = Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
-    const xUnit = dist > 1 ? xDist/dist : xDist;
-    const yUnit = dist > 1 ? yDist/dist : yDist;
-    const areWeThereYet =
-      Math.abs(game.CHAR_X - finalTilePos.x) +
-      Math.abs(game.CHAR_Y - finalTilePos.y) > 0.1;
-    game.CHAR_X -= xUnit / 3;
-    game.CHAR_Y -= yUnit / 3;
-    game.ORIGIN_X += xUnit * game.TILE_SIZE / 3;
-    game.ORIGIN_Y += yUnit * game.TILE_SIZE / 3;
-    const thisAnimFrame = game.CHAR_TILE_X;
-    game.CHAR_TILE_X = !areWeThereYet || thisAnimFrame === 3 ?  0 : thisAnimFrame + 1;
-    const xUnitA = Math.abs(xUnit);
-    const yUnitA = Math.abs(yUnit);
-    if(thisDirection === null) {
-      if(xUnitA > yUnitA && xUnit > 0) thisDirection = 3         // left
-      else if(xUnitA > yUnitA && xUnit <= 0) thisDirection = 1   // right
-      else if(xUnitA <= yUnitA && yUnit > 0) thisDirection = 2   // up
-      else if(xUnitA <= yUnitA && yUnit <= 0) thisDirection = 0; // down
-      game.CHAR_TILE_Y = thisDirection;
+  const blockingTiles = map.tileMap((layer) => layer.properties.blocking);
+  const blockingGraph = new Graph(blockingTiles);
+  function moveCharacter(tilePos) {
+    const path = interpolatePath(4,
+      [{ x: game.CHAR_Y, y: game.CHAR_X }]
+        .concat(astar.search(blockingGraph,
+          blockingGraph.grid[Math.floor(game.CHAR_Y)][Math.floor(game.CHAR_X)],
+          blockingGraph.grid[Math.floor(tilePos.y)][Math.floor(tilePos.x)])));
+
+    if(path.length) {
+      let pathLoc = 0;
+      function nextLoc() {
+        // astar algorithm has x,y switched
+        if(pathLoc < path.length) {
+          game.CHAR_X = path[pathLoc].y;
+          game.CHAR_Y = path[pathLoc].x;
+          game.CHAR_TILE_Y = path[pathLoc].direction;
+          game.CHAR_TILE_X =
+            !(pathLoc !== path.length - 1) || game.CHAR_TILE_X === 3
+              ? 0
+              : game.CHAR_TILE_X + 1;
+          activeCharAnim = setTimeout(nextLoc, 50);
+        }
+        pathLoc++;
+      }
+      nextLoc();
     }
-    if(areWeThereYet) {
-      activeCharAnim = setTimeout(() => {
-        animateCharPos(finalTilePos, thisDirection);
-      }, 100);
+  }
+
+  function interpolatePath(splitCount, path) {
+    const out = [];
+    let direction = 0;
+    for(let i=0; i<path.length - 1; i++){
+      const x1 = path[i].x;
+      const y1 = path[i].y;
+      const x2 = path[i+1].x;
+      const y2 = path[i+1].y;
+
+      if(x1 < x2) direction = 0; // down
+      else if(x1 > x2) direction = 2; // up
+      else if(y1 < y2) direction = 1; // right
+      else direction = 3; // left
+
+      out.push({
+        x: path[i].x,
+        y: path[i].y,
+        direction
+      });
+
+      for(let j=0; j<splitCount; j++) {
+        out.push({
+          x: (x2-x1)*((j+1)/(splitCount+1)) + x1,
+          y: (y2-y1)*((j+1)/(splitCount+1)) + y1,
+          direction,
+        });
+      }
     }
+    out.push({
+        x: path[path.length-1].x,
+        y: path[path.length-1].y,
+        direction, // up
+      });
+    return out;
   }
 
   // Aggregate all animated frames into a single layer
@@ -104,14 +138,14 @@ import TMXMap from './TMXMap.js';
     !layer.properties.frame && layer.properties.aboveChar)
   game.createImageTexture('u_above_char', 2, aboveCharCanvas);
 
-  // Tileset images from tmx file
+  // Character tileset image from tmx file
   for(let i=0; i<map.tileSets.length; i++) {
     const tileSet = map.tileSets[i];
-    game.createImageTexture('u_texture' + i, i+3, tileSet.image);
+    if(tileSet.name === 'character') {
+      game.createImageTexture('u_char', 3, tileSet.image);
+      break;
+    }
   }
-
-
-
 
   document.body.append(game.element);
 })();

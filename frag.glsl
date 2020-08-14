@@ -55,18 +55,17 @@ void main() {
       comp.rgb = layer_anim.rgb;
     }
     // Draw character
-    const vec2 CHAR_HALFSIZE=vec2(0.5,1.);
-    if((abs(tile_real.x - CHAR_X) < CHAR_HALFSIZE.x)
-        && (abs(tile_real.y - CHAR_Y) < CHAR_HALFSIZE.y)) {
+    if((abs(tile_real.x - CHAR_X - CHAR_HALF_X) < CHAR_HALF_X)
+        && (abs(tile_real.y - CHAR_Y) < CHAR_HALF_Y)) {
 
       vec2 tileset_coord = vec2(
-        tile_real.x - CHAR_X + CHAR_HALFSIZE.x,
-        tile_real.y - CHAR_Y + CHAR_HALFSIZE.y
+        tile_real.x - CHAR_X,
+        tile_real.y - CHAR_Y + CHAR_HALF_Y
       );
 
-      vec4 char = texture2D(u_texture1, vec2(
-        ((tileset_coord.x/CHAR_HALFSIZE.x/2.)+CHAR_TILE_X)/TILESET1_COLUMNS,
-        ((tileset_coord.y/CHAR_HALFSIZE.y/2.)+CHAR_TILE_Y)/TILESET1_ROWS
+      vec4 char = texture2D(u_char, vec2(
+        ((tileset_coord.x/CHAR_HALF_X/2.)+CHAR_TILE_X)/TILESET_CHAR_COLUMNS,
+        ((tileset_coord.y/CHAR_HALF_Y/2.)+CHAR_TILE_Y)/TILESET_CHAR_ROWS
       )).rgba;
 
       if(char.a > 0.5) {
