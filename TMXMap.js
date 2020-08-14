@@ -27,6 +27,7 @@ export default class TMXMap {
     this.height = parseInt(mapEl.getAttribute('height'), 10);
     this.tileWidth = parseInt(mapEl.getAttribute('tilewidth'), 10);
     this.tileHeight = parseInt(mapEl.getAttribute('tileheight'), 10);
+    this.properties = new TMXProperties(mapEl);
 
     mapEl.childNodes.forEach(el => {
       switch(el.nodeName) {
@@ -37,6 +38,7 @@ export default class TMXMap {
           this.layers.push(new TMXLayer(this, el));
           break;
         case '#text':
+        case 'properties':
           // noop
           break;
         default:
@@ -92,21 +94,24 @@ export default class TMXMap {
     }
     return canvas;
   }
-  tileMap(layerFilterFun) {
+  tileMap(layerFilterFun, foundGidFun, defaultValue) {
     const out = new Array(this.height);
+    let foundAny = false;
     for(let i=0; i<this.layers.length; i++) {
       if(layerFilterFun && !layerFilterFun(this.layers[i], i)) continue;
+      foundAny = true;
       for(let y=0; y<this.height; y++) {
         if(out[y] === undefined) out[y] = new Array(this.width);
         for(let x=0; x<this.width; x++) {
           const tileNum = (y * this.height) + x;
           const tileGid = this.layers[i].data[tileNum];
-          if(out[y][x] === undefined) out[y][x] = 1;
+          if(out[y][x] === undefined) out[y][x] = defaultValue;
           if(tileGid === 0) continue;
-          out[y][x] = 0;
+          out[y][x] = foundGidFun(this.layers[i], x, y, tileGid, out[y][x]);
         }
       }
     }
+    if(!foundAny) return null;
     return out;
   }
 }
@@ -120,11 +125,6 @@ class TMXTileSet {
     this.firstgid = parseInt(el.getAttribute('firstgid'), 10);
     this.tileWidth = parseInt(el.getAttribute('tilewidth'), 10);
     this.tileHeight = parseInt(el.getAttribute('tileheight'), 10);
-
-    // TODO: support tilesets of different sizes from map
-    if(this.tileWidth !== parent.tileWidth || this.tileHeight !== parent.tileHeight)
-      throw new Error('tile_size_mismatch');
-
     this.tileCount = parseInt(el.getAttribute('tilecount'), 10);
     this.columns = parseInt(el.getAttribute('columns'), 10);
     this.lastgid = this.firstgid + this.tileCount;
@@ -151,23 +151,7 @@ class TMXLayer {
     this.width = parseInt(el.getAttribute('width'), 10);
     this.height = parseInt(el.getAttribute('height'), 10);
 
-    this.properties = {};
-    el.querySelectorAll('properties property').forEach(prop => {
-      const type = prop.getAttribute('type');
-      const value = prop.getAttribute('value');
-      const name = prop.getAttribute('name');
-      let retVal;
-      switch(type) {
-        case 'bool':
-          this.properties[name] = value === 'true';
-          break;
-        case 'int':
-          this.properties[name] = parseInt(value, 10);
-          break;
-        default:
-          this.properties[name] = value;
-      }
-    });
+    this.properties = new TMXProperties(el);
 
     // TODO: support layers that don't fill the map
     if(this.width !== parent.width || this.height !== parent.height)
@@ -176,5 +160,29 @@ class TMXLayer {
     const dataEl = el.querySelector('data[encoding="csv"]');
     this.name = el.getAttribute('name');
     this.data = dataEl.innerHTML.trim().split(',').map(x => parseInt(x, 10));
+  }
+}
+
+class TMXProperties {
+  constructor(el) {
+    el.childNodes.forEach(child => {
+      if(child.nodeName !== 'properties') return;
+      child.childNodes.forEach(prop => {
+        if(prop.nodeName !== 'property') return;
+        const type = prop.getAttribute('type');
+        const value = prop.getAttribute('value');
+        const name = prop.getAttribute('name');
+        switch(type) {
+          case 'bool':
+            this[name] = value === 'true';
+            break;
+          case 'int':
+            this[name] = parseInt(value, 10);
+            break;
+          default:
+            this[name] = value;
+        }
+      });
+    });
   }
 }

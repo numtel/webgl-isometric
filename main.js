@@ -3,29 +3,40 @@ import TMXMap from './TMXMap.js';
 
 import { astar, Graph } from './astar.js';
 
-(async function() {
-  const map = window.map = new TMXMap;
-  await map.load('zeldish.tmx');
+async function loadGame(mapFile) {
+  const map = new TMXMap;
+  await map.load(mapFile);
 
-  const game = window.game = new OrthoView({
+  let charTileSet;
+  for(let i=0; i<map.tileSets.length; i++) {
+    const tileSet = map.tileSets[i];
+    if(tileSet.name === 'character') {
+      charTileSet = tileSet;
+      break;
+    }
+  }
+
+  const game = new OrthoView({
     fullPage: true,
     dataValues: {
       // Override defaults
       ORIGIN_X: -820,
       ORIGIN_Y: -90,
-      TILE_SIZE: 16,
+      TILE_SIZE: 32,
       // Custom values
-      CURSOR_SIZE: 20,
-      CHAR_X: 70,
-      CHAR_Y: 15,
+      CHAR_X: map.properties.initCharX,
+      CHAR_Y: map.properties.initCharY,
       CHAR_TILE_X: 0,
       CHAR_TILE_Y: 0,
       CHAR_HALF_X: 0.5,
       CHAR_HALF_Y: 1,
-      MAP_WIDTH: 100,
-      MAP_HEIGHT: 100,
-      TILESET_CHAR_COLUMNS: 4,
-      TILESET_CHAR_ROWS: 4,
+      BLACK_CIRCLE_X: 4,
+      BLACK_CIRCLE_Y: 3,
+      BLACK_CIRCLE_RAD: 0,
+      MAP_WIDTH: map.width,
+      MAP_HEIGHT: map.height,
+      TILESET_CHAR_COLUMNS: charTileSet.columns,
+      TILESET_CHAR_ROWS: charTileSet.image.height / charTileSet.tileHeight,
     },
     chunkMap: {
       map_uniforms: [
@@ -41,13 +52,53 @@ import { astar, Graph } from './astar.js';
         clearTimeout(activeCharAnim);
         activeCharAnim = null;
       }
-      moveCharacter(tilePos);
+      if(tilePos.x > 0 && tilePos.x < map.width
+          && tilePos.y > 0 && tilePos.y < map.height) moveCharacter(tilePos);
     },
   });
+  const retval = { map, game };
+  game.stopped = false;
   await game.init();
+  game.center(game.CHAR_X, game.CHAR_Y);
+
+  const triggers = {
+    msgBox({ text }) {
+      alert(text);
+    },
+    async loadMap({ mapFile, setCharX, setCharY }) {
+      const oldGame = retval.game;
+      oldGame.BLACK_CIRCLE_X = oldGame.CHAR_X;
+      oldGame.BLACK_CIRCLE_Y = oldGame.CHAR_Y;
+      oldGame.BLACK_CIRCLE_RAD = 0;
+      function growCircle() {
+        oldGame.BLACK_CIRCLE_RAD++;
+        if(oldGame.BLACK_CIRCLE_RAD < 100) {
+          if(oldGame.stopped) return;
+          setTimeout(growCircle, 20);
+        }
+      }
+      growCircle();
+
+      const newMount = await loadGame(mapFile);
+      oldGame.stopped = true;
+      game.element.parentNode.removeChild(game.element);
+      retval.game = newMount.game;
+      retval.map = newMount.map;
+      newMount.game.CHAR_X = setCharX;
+      newMount.game.CHAR_Y = setCharY;
+      newMount.game.TILE_SIZE = oldGame.TILE_SIZE;
+      newMount.game.center(setCharX, setCharY);
+    },
+  };
 
   let activeCharAnim;
-  const blockingTiles = map.tileMap((layer) => layer.properties.blocking);
+  const blockingTiles = map.tileMap(
+    (layer) => layer.properties.blocking,
+    (layer, x, y, tileGid, prev) => 0,
+    1);
+  const triggerTiles = map.tileMap(
+    (layer) => !!layer.properties.trigger,
+    (layer, x, y, tileGid, prev) => layer.properties);
   const blockingGraph = new Graph(blockingTiles);
   function moveCharacter(tilePos) {
     const path = interpolatePath(4,
@@ -56,24 +107,28 @@ import { astar, Graph } from './astar.js';
           blockingGraph.grid[Math.floor(game.CHAR_Y)][Math.floor(game.CHAR_X)],
           blockingGraph.grid[Math.floor(tilePos.y)][Math.floor(tilePos.x)])));
 
-    if(path.length) {
-      let pathLoc = 0;
-      function nextLoc() {
-        // astar algorithm has x,y switched
-        if(pathLoc < path.length) {
-          game.CHAR_X = path[pathLoc].y;
-          game.CHAR_Y = path[pathLoc].x;
-          game.CHAR_TILE_Y = path[pathLoc].direction;
-          game.CHAR_TILE_X =
-            !(pathLoc !== path.length - 1) || game.CHAR_TILE_X === 3
-              ? 0
-              : game.CHAR_TILE_X + 1;
-          activeCharAnim = setTimeout(nextLoc, 50);
-        }
-        pathLoc++;
+    let pathLoc = 0;
+    function nextLoc() {
+      // astar algorithm has x,y switched
+      if(pathLoc < path.length) {
+        game.CHAR_X = path[pathLoc].y;
+        game.CHAR_Y = path[pathLoc].x;
+        game.CHAR_TILE_Y = path[pathLoc].direction;
+        game.CHAR_TILE_X =
+          !(pathLoc !== path.length - 1) || game.CHAR_TILE_X === 3
+            ? 0
+            : game.CHAR_TILE_X + 1;
+        if(game.stopped) return;
+        activeCharAnim = setTimeout(nextLoc, 50);
+      } else if(path.length > 1) {
+        const props = triggerTiles
+          && triggerTiles[path[path.length-1].x][path[path.length-1].y];
+        if(props && props.trigger && (props.trigger in triggers))
+          triggers[props.trigger](props);
       }
-      nextLoc();
+      pathLoc++;
     }
+    nextLoc();
   }
 
   function interpolatePath(splitCount, path) {
@@ -135,28 +190,30 @@ import { astar, Graph } from './astar.js';
     game.updateImageTexture(1, animCanvasAbove);
     frameCount++;
     if(frameCount > Math.pow(2,32) - 1) frameCount = 0;
+    if(game.stopped) return;
     setTimeout(animationLayer, 200);
   }
   animationLayer(true);
 
   // Prerendered under/over aggregates
   const underCharCanvas = map.draw((layer, index) =>
-    !layer.properties.frame && !layer.properties.aboveChar)
+    !layer.properties.frame
+    && !layer.properties.aboveChar
+    && !layer.properties.trigger)
   game.createImageTexture('u_under_char', 2, underCharCanvas);
 
   const aboveCharCanvas = map.draw((layer, index) =>
-    !layer.properties.frame && layer.properties.aboveChar)
+    !layer.properties.frame
+    && layer.properties.aboveChar
+    && !layer.properties.trigger)
   game.createImageTexture('u_above_char', 3, aboveCharCanvas);
 
   // Character tileset image from tmx file
-  for(let i=0; i<map.tileSets.length; i++) {
-    const tileSet = map.tileSets[i];
-    if(tileSet.name === 'character') {
-      game.createImageTexture('u_char', 4, tileSet.image);
-      break;
-    }
-  }
+  game.createImageTexture('u_char', 4, charTileSet.image);
 
   document.body.append(game.element);
-})();
 
+  return retval;
+}
+
+window.mount = loadGame('inside.tmx');

@@ -316,6 +316,10 @@ export default class OrthoView {
     this.gl.activeTexture(this.gl.TEXTURE0 + slot);
     this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA,this.gl.UNSIGNED_BYTE, image);
   }
+  center(tileX, tileY) {
+    this.ORIGIN_X = (-tileX * this.TILE_SIZE) + this.CANVAS_WIDTH / 2;
+    this.ORIGIN_Y = (-tileY * this.TILE_SIZE) + this.CANVAS_HEIGHT / 2;
+  }
 }
 
 function pointDistance(point1, point2) {

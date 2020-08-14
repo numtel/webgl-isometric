@@ -5,14 +5,6 @@ vec2 screen_px() {
   return vec2((1. - uv_pos.x) * CANVAS_WIDTH, uv_pos.y * CANVAS_HEIGHT);
 }
 
-bool is_origin(vec2 px, float dist) {
-  return abs(px.x - ORIGIN_X) < dist && abs(px.y - ORIGIN_Y) < dist;
-}
-
-bool is_cursor(vec2 px) {
-  return abs(px.x - CURSOR_X) < CURSOR_SIZE && abs(px.y - CURSOR_Y) < CURSOR_SIZE;
-}
-
 vec2 calc_cursor_tile() {
   vec2 cursor_raw = vec2(CURSOR_X - ORIGIN_X, CURSOR_Y - ORIGIN_Y);
   return vec2(
@@ -43,7 +35,7 @@ void main() {
 
   vec3 comp = vec3(0., 0.2, 0.);
 
-  if(tile_real.x >= 0. && tile_real.y >= 0. && tile_real.x <= 99. && tile_real.y <= 99.) {
+  if(tile_real.x >= 0. && tile_real.y >= 0. && tile_real.x < MAP_WIDTH && tile_real.y < MAP_HEIGHT) {
     vec2 layer_pos = vec2(
       tile_real.x / MAP_WIDTH,
       tile_real.y / MAP_HEIGHT
@@ -87,12 +79,14 @@ void main() {
     comp.g = 1.;
   }
 
-  if(is_cursor(px)) {
-    comp.r = 1.;
-  }
-  if(is_origin(px, 3.)) {
-    comp.b = 1.;
-    comp.r = 1.;
+  vec2 blackCircleOff = vec2(
+    BLACK_CIRCLE_X - tile_real.x,
+    BLACK_CIRCLE_Y - tile_real.y
+  );
+  float blackCircleDist = BLACK_CIRCLE_RAD * BLACK_CIRCLE_RAD -
+    (blackCircleOff.x * blackCircleOff.x + blackCircleOff.y * blackCircleOff.y);
+  if(blackCircleDist > 0.) {
+    comp.rgb = vec3(0.,0.,0.);
   }
 
   gl_FragColor = vec4(comp, 1.);

@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.4" tiledversion="1.4.1" orientation="orthogonal" renderorder="right-down" width="12" height="12" tilewidth="16" tileheight="16" infinite="0" nextlayerid="8" nextobjectid="1">
+ <properties>
+  <property name="initCharX" type="int" value="6"/>
+  <property name="initCharY" type="int" value="3"/>
+ </properties>
+ <tileset firstgid="1" name="inside" tilewidth="16" tileheight="16" tilecount="1024" columns="32">
+  <image source="assets/Inner.png" width="512" height="512"/>
+ </tileset>
+ <tileset firstgid="1025" name="character" tilewidth="16" tileheight="32" tilecount="136" columns="17">
+  <image source="assets/character.png" width="272" height="256"/>
+ </tileset>
+ <layer id="1" name="Tile Layer 1" width="12" height="12">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,225,226,226,226,226,226,226,227,0,0,0,
+0,257,258,258,258,258,258,258,259,0,0,0,
+0,257,258,258,258,258,258,258,259,0,0,0,
+0,257,258,258,258,258,258,258,259,0,0,0,
+0,289,290,290,322,258,258,258,259,0,0,0,
+0,0,0,0,257,258,258,258,259,0,0,0,
+0,225,226,226,354,258,258,258,259,0,0,0,
+0,257,258,258,258,258,258,258,259,0,0,0,
+0,257,258,258,258,258,258,258,259,0,0,0,
+0,289,290,290,290,290,290,290,291,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="2" name="Tile Layer 2" width="12" height="12">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,208,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,70,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="3" name="blocking" width="12" height="12">
+  <properties>
+   <property name="blocking" type="bool" value="true"/>
+  </properties>
+  <data encoding="csv">
+65,65,65,65,65,65,65,65,65,65,0,0,
+65,0,0,0,0,0,0,0,49,65,0,0,
+65,0,46,47,48,0,176,0,81,65,0,0,
+65,0,78,79,80,0,0,0,113,65,0,0,
+65,0,110,111,112,0,0,0,0,65,0,0,
+65,0,0,0,0,0,0,0,0,65,0,0,
+65,388,390,65,0,0,0,0,0,65,0,0,
+65,420,422,0,0,0,0,0,0,65,0,0,
+65,0,0,0,0,0,0,0,0,65,0,0,
+65,0,0,0,0,0,0,0,0,65,0,0,
+65,0,0,0,0,0,0,0,0,65,0,0,
+65,65,65,65,65,35,65,65,65,65,0,0
+</data>
+ </layer>
+ <layer id="5" name="abovechar" width="12" height="12">
+  <properties>
+   <property name="aboveChar" type="bool" value="true"/>
+  </properties>
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,144,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,364,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="4" name="trigger-out" width="12" height="12" visible="0">
+  <properties>
+   <property name="mapFile" value="zeldish.tmx"/>
+   <property name="setCharX" type="int" value="19"/>
+   <property name="setCharY" type="int" value="16"/>
+   <property name="trigger" value="loadMap"/>
+  </properties>
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,231,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="6" name="message" width="12" height="12">
+  <properties>
+   <property name="text" value="Every book falls apart into a pile of dust as soon as it's touched."/>
+   <property name="trigger" value="msgBox"/>
+  </properties>
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,35,35,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="7" name="plantmsg" width="12" height="12">
+  <properties>
+   <property name="text" value="This plant could use some watering."/>
+   <property name="trigger" value="msgBox"/>
+  </properties>
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,35,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+</map>
