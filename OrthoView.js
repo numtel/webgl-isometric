@@ -1,12 +1,15 @@
+const STOPPED = Symbol();
+
 export default class OrthoView {
   constructor(options) {
     this.options = Object.assign({
       fullPage: false,
-      dataValues: {},
+      dataValues: {}, // floats
       chunkMap: {},
       tileSizeMin: 3,
       fragmentShader: 'frag.glsl',
       onTapOrClick: null,
+      onFrame: null,
     }, options);
 
     this.element = document.createElement('canvas');
@@ -20,6 +23,7 @@ export default class OrthoView {
 
     this.gl = null;
     this.program = null;
+    this[STOPPED] = false;
     const dataValues = Object.entries(Object.assign({
       CANVAS_WIDTH: this.element.width,
       CANVAS_HEIGHT: this.element.height,
@@ -268,12 +272,17 @@ export default class OrthoView {
 
 
     const draw = () => {
+      if(this[STOPPED] === true) return;
+      this.options.onFrame && this.options.onFrame();
       this.gl.uniform1fv(this.dataLocation, this.dataValues);
       this.gl.clear(this.gl.COLOR_BUFFER_BIT);
       this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
       window.requestAnimationFrame(draw);
     }
     draw();
+  }
+  stop() {
+    this[STOPPED] = true;
   }
   _createTexture(name, slot) {
     const loc = this.gl.getUniformLocation(this.program, name);

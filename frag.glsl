@@ -50,12 +50,22 @@ void main() {
     comp = blend(comp, layer_anim);
 
     // Draw character
-    if((abs(tile_real.x - CHAR_X - CHAR_HALF_X) < CHAR_HALF_X)
-        && (abs(tile_real.y - CHAR_Y) < CHAR_HALF_Y)) {
+    float moveProgress;
+    if(CHAR_MOVE_FRAME >= 0.) {
+      moveProgress = ((FRAME_NUM - CHAR_MOVE_FRAME) / CHAR_MOVE_LEN);
+    } else {
+      moveProgress = 0.;
+    }
+    vec2 charPos = vec2(
+      CHAR_X + ((CHAR_MOVE_X - CHAR_X) * moveProgress),
+      CHAR_Y + ((CHAR_MOVE_Y - CHAR_Y) * moveProgress)
+    );
+    if((abs(tile_real.x - charPos.x - CHAR_HALF_X) < CHAR_HALF_X)
+        && (abs(tile_real.y - charPos.y) < CHAR_HALF_Y)) {
 
       vec2 tileset_coord = vec2(
-        tile_real.x - CHAR_X,
-        tile_real.y - CHAR_Y + CHAR_HALF_Y
+        tile_real.x - charPos.x,
+        tile_real.y - charPos.y + CHAR_HALF_Y
       );
 
       vec4 char = texture2D(u_char, vec2(
@@ -79,11 +89,17 @@ void main() {
     comp.g = 1.;
   }
 
+  float circleProgress;
+  if(BLACK_CIRCLE_FRAME >= 0.) {
+    circleProgress = ((FRAME_NUM - BLACK_CIRCLE_FRAME) / BLACK_CIRCLE_LEN) * BLACK_CIRCLE_RAD;
+  } else {
+    circleProgress = 0.;
+  }
   vec2 blackCircleOff = vec2(
     BLACK_CIRCLE_X - tile_real.x,
     BLACK_CIRCLE_Y - tile_real.y
   );
-  float blackCircleDist = BLACK_CIRCLE_RAD * BLACK_CIRCLE_RAD -
+  float blackCircleDist = circleProgress * circleProgress -
     (blackCircleOff.x * blackCircleOff.x + blackCircleOff.y * blackCircleOff.y);
   if(blackCircleDist > 0.) {
     comp.rgb = vec3(0.,0.,0.);
