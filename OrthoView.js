@@ -33,6 +33,8 @@ export default class OrthoView {
       TILE_SIZE_Y: 0.5, // legacy? height proportional to width in isometric
       CURSOR_X: 0,
       CURSOR_Y: 0,
+      CURSOR_TILE_X: 0,
+      CURSOR_TILE_Y: 0,
     }, this.options.dataValues));
 
     this.dataLocation = null;
@@ -165,6 +167,7 @@ export default class OrthoView {
     this.element.addEventListener('mousemove', event => {
       this.CURSOR_X = event.layerX - event.target.offsetLeft;
       this.CURSOR_Y = event.layerY - event.target.offsetTop;
+      this.updateCursorTile();
       if(touchStartPos) {
         this.ORIGIN_X = touchStartPos.x + this.CURSOR_X - touchStartCursor.x;
         this.ORIGIN_Y = touchStartPos.y + this.CURSOR_Y - touchStartCursor.y;
@@ -193,6 +196,7 @@ export default class OrthoView {
       event.preventDefault();
       this.CURSOR_X = event.changedTouches[0].pageX - event.target.offsetLeft;
       this.CURSOR_Y = event.changedTouches[0].pageY - event.target.offsetTop;
+      this.updateCursorTile();
 
       touchStartPos = { x: this.ORIGIN_X, y: this.ORIGIN_Y };
       touchStartCursor = { x: this.CURSOR_X, y: this.CURSOR_Y };
@@ -209,6 +213,7 @@ export default class OrthoView {
         const initRawY = (tpCache[0].clientY + tpCache[1].clientX)/2 - this.ORIGIN_Y;
         this.CURSOR_X = initRawX + initOg.x;
         this.CURSOR_Y = initRawY + initOg.y;
+        this.updateCursorTile();
 
         initTileX = -(initRawX * this.TILE_SIZE_Y - initRawY) / this.TILE_SIZE;
         initTileY = -(-initRawX * this.TILE_SIZE_Y - initRawY) / this.TILE_SIZE;
@@ -249,6 +254,7 @@ export default class OrthoView {
 
         this.CURSOR_X = event.changedTouches[0].pageX - event.target.offsetLeft;
         this.CURSOR_Y = event.changedTouches[0].pageY - event.target.offsetTop;
+        this.updateCursorTile();
         this.ORIGIN_X = touchStartPos.x + this.CURSOR_X - touchStartCursor.x;
         this.ORIGIN_Y = touchStartPos.y + this.CURSOR_Y - touchStartCursor.y;
 
@@ -283,6 +289,10 @@ export default class OrthoView {
   }
   stop() {
     this[STOPPED] = true;
+  }
+  updateCursorTile() {
+    this.CURSOR_TILE_X = (this.CURSOR_X - this.ORIGIN_X) / this.TILE_SIZE;
+    this.CURSOR_TILE_Y = (this.CURSOR_Y - this.ORIGIN_Y) / this.TILE_SIZE;
   }
   _createTexture(name, slot) {
     const loc = this.gl.getUniformLocation(this.program, name);

@@ -42,7 +42,7 @@ async function loadGame(mapFile) {
       map_uniforms: [
           'uniform sampler2D u_under_char;',
           'uniform sampler2D u_above_char;',
-          'uniform sampler2D u_anim;',
+          'uniform sampler2D u_anim_below;',
           'uniform sampler2D u_anim_above;',
           'uniform sampler2D u_char;',
         ].join('\n'),
@@ -72,8 +72,8 @@ async function loadGame(mapFile) {
         game.CHAR_MOVE_Y = next.x;
         game.CHAR_MOVE_FRAME = game.FRAME_NUM;
         game.CHAR_TILE_X = game.CHAR_TILE_X === 3 ? 0 : game.CHAR_TILE_X + 1;
-        if(game.CHAR_X < game.CHAR_MOVE_X) game.CHAR_TILE_Y = 1; // left
-        else if(game.CHAR_X > game.CHAR_MOVE_X) game.CHAR_TILE_Y = 3; // right
+        if(game.CHAR_X < game.CHAR_MOVE_X) game.CHAR_TILE_Y = 1; // right
+        else if(game.CHAR_X > game.CHAR_MOVE_X) game.CHAR_TILE_Y = 3; // left
         else if(game.CHAR_Y < game.CHAR_MOVE_Y) game.CHAR_TILE_Y = 0; // down
         else game.CHAR_TILE_Y = 2; // up
       }
@@ -114,40 +114,36 @@ async function loadGame(mapFile) {
     },
   };
 
-  const blockingTiles = map.tileMap(
+  const blockingGraph = new Graph(map.tileMap(
     (layer) => layer.properties.blocking,
     (layer, x, y, tileGid, prev) => 0,
-    1);
+    1));
   const triggerTiles = map.tileMap(
     (layer) => !!layer.properties.trigger,
     (layer, x, y, tileGid, prev) => layer.properties);
-  const blockingGraph = new Graph(blockingTiles);
 
   // Aggregate all animated frames into a single layer
   let animFrameCount = 0;
-  const animFilterBelow = (layer) => {
-    const { frame, frame_max, aboveChar } = layer.properties;
-    if(aboveChar || !frame || !frame_max || frame-1 !== animFrameCount % frame_max) return false;
-    return true;
-  };
+  const animFilterBelow = ({ properties:{ frame, frame_max, aboveChar } }) =>
+    !(aboveChar || !frame || !frame_max || frame-1 !== animFrameCount % frame_max);
   const animCanvasBelow = map.draw(animFilterBelow);
-  game.createImageTexture('u_anim', 0, animCanvasBelow);
-  const animFilterAbove = (layer) => {
-    const { frame, frame_max, aboveChar } = layer.properties;
-    if(!aboveChar || !frame || !frame_max || frame-1 !== animFrameCount % frame_max) return false;
-    return true;
-  };
+  game.createImageTexture('u_anim_below', 0, animCanvasBelow);
+
+  const animFilterAbove = ({ properties:{ frame, frame_max, aboveChar } }) =>
+    !(!aboveChar || !frame || !frame_max || frame-1 !== animFrameCount % frame_max);
   const animCanvasAbove = map.draw(animFilterAbove);
   game.createImageTexture('u_anim_above', 1, animCanvasAbove);
-  function animationLayer(init=false) {
+
+  function animationLayer() {
     map.draw(animFilterBelow, animCanvasBelow);
     game.updateImageTexture(0, animCanvasBelow);
+
     map.draw(animFilterAbove, animCanvasAbove);
     game.updateImageTexture(1, animCanvasAbove);
+
     animFrameCount++;
     if(animFrameCount > Math.pow(2,32) - 1) animFrameCount = 0;
   }
-  animationLayer(true);
 
   // Prerendered under/over aggregates
   const underCharCanvas = map.draw((layer, index) =>
