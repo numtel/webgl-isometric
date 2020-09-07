@@ -7,27 +7,35 @@ async function loadGame(mapFile) {
   const map = new TMXMap;
   await map.load(mapFile);
 
-  const charTileSet = map.tileSets.find(ts => ts.name === 'character');;
-
   let curCharPath = null;
+  let charSpeed = 0.1;
 
   const game = new OrthoView({
     fullPage: true,
+    objects: {
+      character: {
+        x: map.properties.initCharX,
+        y: map.properties.initCharY,
+        texture: 'u_char',
+        tileset: map.tileSets.find(ts => ts.name === 'character'),
+        tileX: 0,
+        tileY: 0,
+        offsetY: -1,
+        offsetX: 0,
+        width: 1,
+        height: 2,
+      },
+    },
     dataValues: {
       // Override default
       TILE_SIZE: 32,
       // Custom values
+      HUE_RATE: 300,
+      PSYCHE_HUE: -1,
+      WAVY: -1,
+      FISH: -1,
+      LENS: -1,
       FRAME_NUM: 0,
-      CHAR_X: map.properties.initCharX,
-      CHAR_Y: map.properties.initCharY,
-      CHAR_MOVE_X: 0,
-      CHAR_MOVE_Y: 0,
-      CHAR_MOVE_FRAME: -1,
-      CHAR_MOVE_LEN: 10,
-      CHAR_TILE_X: 0,
-      CHAR_TILE_Y: 0,
-      CHAR_HALF_X: 0.5,
-      CHAR_HALF_Y: 1,
       BLACK_CIRCLE_X: 4,
       BLACK_CIRCLE_Y: 3,
       BLACK_CIRCLE_FRAME: -1,
@@ -35,8 +43,6 @@ async function loadGame(mapFile) {
       BLACK_CIRCLE_RAD: 100,
       MAP_WIDTH: map.width,
       MAP_HEIGHT: map.height,
-      TILESET_CHAR_COLUMNS: charTileSet.columns,
-      TILESET_CHAR_ROWS: charTileSet.image.height / charTileSet.tileHeight,
     },
     chunkMap: {
       map_uniforms: [
@@ -47,35 +53,46 @@ async function loadGame(mapFile) {
           'uniform sampler2D u_char;',
         ].join('\n'),
     },
-    onFrame() {
+    onFrame(delta) {
       if(game.FRAME_NUM > Math.pow(2, 32)) game.FRAME_NUM = 0;
       else game.FRAME_NUM++;
 
       if(game.FRAME_NUM % 7 === 0) animationLayer();
 
-      if(curCharPath && game.CHAR_MOVE_FRAME + game.CHAR_MOVE_LEN <= game.FRAME_NUM) {
-        if(game.CHAR_MOVE_FRAME >= 0) {
-          game.CHAR_X = game.CHAR_MOVE_X;
-          game.CHAR_Y = game.CHAR_MOVE_Y;
-        }
-        if(curCharPath.length === 0) {
+      if(curCharPath) {
+        if(curCharPath.length === 0){
           curCharPath = null;
-          game.CHAR_TILE_X = 0;
-          game.CHAR_MOVE_FRAME = -1;
-          const props = triggerTiles && triggerTiles[game.CHAR_Y][game.CHAR_X];
+          game.character.tileX = 0;
+          const props = triggerTiles &&
+            triggerTiles[Math.round(game.character.y)][Math.round(game.character.x)];
           if(props && props.trigger && (props.trigger in triggers))
             triggers[props.trigger](props);
           return;
         }
-        const next = curCharPath.shift();
-        game.CHAR_MOVE_X = next.y;
-        game.CHAR_MOVE_Y = next.x;
-        game.CHAR_MOVE_FRAME = game.FRAME_NUM;
-        game.CHAR_TILE_X = game.CHAR_TILE_X === 3 ? 0 : game.CHAR_TILE_X + 1;
-        if(game.CHAR_X < game.CHAR_MOVE_X) game.CHAR_TILE_Y = 1; // right
-        else if(game.CHAR_X > game.CHAR_MOVE_X) game.CHAR_TILE_Y = 3; // left
-        else if(game.CHAR_Y < game.CHAR_MOVE_Y) game.CHAR_TILE_Y = 0; // down
-        else game.CHAR_TILE_Y = 2; // up
+        const next = curCharPath[0];
+        const xDiff = game.character.x - next.y;
+        const yDiff = game.character.y - next.x;
+        const distToNext = Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+        if(distToNext < charSpeed) {
+          curCharPath.shift();
+          game.character.x -= xDiff;
+          game.character.y -= yDiff;
+        } else {
+          game.character.x -= xDiff * (1/distToNext) * charSpeed;
+          game.character.y -= yDiff * (1/distToNext) * charSpeed;
+
+          if(game.FRAME_NUM % 9 === 0) {
+            game.character.tileX = game.character.tileX === 3 ? 0 : game.character.tileX + 1;
+          }
+
+          if(Math.abs(xDiff) > Math.abs(yDiff)) {
+            if(xDiff > 0) game.character.tileY = 3;
+            else game.character.tileY = 1;
+          } else {
+            if(yDiff > 0) game.character.tileY = 2;
+            else game.character.tileY = 0;
+          }
+        }
       }
     },
     onTapOrClick(event, tilePos) {
@@ -83,14 +100,14 @@ async function loadGame(mapFile) {
           && tilePos.y > 0 && tilePos.y < map.height) {
         // Move character
         curCharPath = astar.search(blockingGraph,
-              blockingGraph.grid[Math.floor(game.CHAR_Y)][Math.floor(game.CHAR_X)],
-              blockingGraph.grid[Math.floor(tilePos.y)][Math.floor(tilePos.x)]);
+          blockingGraph.grid[Math.round(game.character.y)][Math.round(game.character.x)],
+          blockingGraph.grid[Math.floor(tilePos.y)][Math.floor(tilePos.x)]);
       }
     },
   });
   const retval = { map, game };
   await game.init();
-  game.center(game.CHAR_X, game.CHAR_Y);
+  game.center(game.character.x, game.character.y);
 
   const triggers = {
     msgBox({ text }) {
@@ -98,8 +115,8 @@ async function loadGame(mapFile) {
     },
     async loadMap({ mapFile, setCharX, setCharY }) {
       const oldGame = retval.game;
-      oldGame.BLACK_CIRCLE_X = oldGame.CHAR_X;
-      oldGame.BLACK_CIRCLE_Y = oldGame.CHAR_Y;
+      oldGame.BLACK_CIRCLE_X = oldGame.character.x;
+      oldGame.BLACK_CIRCLE_Y = oldGame.character.y;
       oldGame.BLACK_CIRCLE_FRAME = game.FRAME_NUM;
 
       const newMount = await loadGame(mapFile);
@@ -107,8 +124,8 @@ async function loadGame(mapFile) {
       game.element.parentNode.removeChild(game.element);
       retval.game = newMount.game;
       retval.map = newMount.map;
-      newMount.game.CHAR_X = setCharX;
-      newMount.game.CHAR_Y = setCharY;
+      newMount.game.character.x = setCharX;
+      newMount.game.character.y = setCharY;
       newMount.game.TILE_SIZE = oldGame.TILE_SIZE;
       newMount.game.center(setCharX, setCharY);
     },
@@ -159,7 +176,7 @@ async function loadGame(mapFile) {
   game.createImageTexture('u_above_char', 3, aboveCharCanvas);
 
   // Character tileset image from tmx file
-  game.createImageTexture('u_char', 4, charTileSet.image);
+  game.createImageTexture('u_char', 4, game.character.tileset.image);
 
   document.body.append(game.element);
 

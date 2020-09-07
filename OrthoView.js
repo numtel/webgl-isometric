@@ -1,3 +1,5 @@
+import MapObj from './MapObj.js';
+
 const STOPPED = Symbol();
 
 export default class OrthoView {
@@ -6,6 +8,7 @@ export default class OrthoView {
       fullPage: false,
       dataValues: {}, // floats
       chunkMap: {},
+      objects: {},
       tileSizeMin: 3,
       fragmentShader: 'frag.glsl',
       onTapOrClick: null,
@@ -20,6 +23,11 @@ export default class OrthoView {
       this.element.style.top = 0;
       this.element.style.left = 0;
     }
+
+    Object.assign(this, Object.entries(this.options.objects).reduce((out, def, index) =>
+      ({...out, [def[0]]: new MapObj(this, def[1], index) }), {}));
+    this.options.chunkMap['draw_objects'] =
+      Object.keys(this.options.objects).map(obj => this[obj].chunk()).join('\n');
 
     this.gl = null;
     this.program = null;
@@ -277,15 +285,15 @@ export default class OrthoView {
     }
 
 
-    const draw = () => {
+    const draw = (delta) => {
       if(this[STOPPED] === true) return;
-      this.options.onFrame && this.options.onFrame();
+      this.options.onFrame && this.options.onFrame(delta);
       this.gl.uniform1fv(this.dataLocation, this.dataValues);
       this.gl.clear(this.gl.COLOR_BUFFER_BIT);
       this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
       window.requestAnimationFrame(draw);
     }
-    draw();
+    draw(0);
   }
   stop() {
     this[STOPPED] = true;

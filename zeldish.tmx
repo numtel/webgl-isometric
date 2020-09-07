@@ -7,8 +7,11 @@
  <tileset firstgid="1" name="Overworld" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
   <image source="assets/Overworld.png" width="1024" height="1024"/>
  </tileset>
- <tileset firstgid="4097" name="character" tilewidth="16" tileheight="32" tilecount="16" columns="4">
-  <image source="assets/NPC_test.png" width="64" height="128"/>
+ <tileset firstgid="4097" name="character" tilewidth="16" tileheight="32" tilecount="128" columns="16">
+  <image source="assets/character.png" width="256" height="256"/>
+ </tileset>
+ <tileset firstgid="4225" name="character_wide" tilewidth="32" tileheight="32" tilecount="64" columns="8">
+  <image source="assets/character.png" width="256" height="256"/>
  </tileset>
  <layer id="1" name="ground" width="60" height="60">
   <data encoding="csv">
