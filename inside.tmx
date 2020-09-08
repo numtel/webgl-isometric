@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.1" orientation="orthogonal" renderorder="right-down" width="12" height="12" tilewidth="16" tileheight="16" infinite="0" nextlayerid="10" nextobjectid="2">
+<map version="1.4" tiledversion="1.4.1" orientation="orthogonal" renderorder="right-down" width="12" height="12" tilewidth="16" tileheight="16" infinite="0" nextlayerid="11" nextobjectid="9">
  <tileset firstgid="1" name="inside" tilewidth="16" tileheight="16" tilecount="1024" columns="32">
   <image source="assets/Inner.png" width="512" height="512"/>
  </tileset>
  <tileset firstgid="1025" name="character" tilewidth="16" tileheight="32" tilecount="128" columns="16">
   <image source="assets/character.png" width="256" height="256"/>
+ </tileset>
+ <tileset firstgid="1153" name="objects" tilewidth="16" tileheight="16" tilecount="720" columns="36">
+  <image source="assets/objects.png" width="576" height="320"/>
  </tileset>
  <layer id="1" name="Tile Layer 1" width="12" height="12">
   <data encoding="csv">
@@ -76,68 +79,6 @@
 0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <layer id="4" name="trigger-out" width="12" height="12" visible="0">
-  <properties>
-   <property name="mapFile" value="zeldish.tmx"/>
-   <property name="setCharX" type="int" value="19"/>
-   <property name="setCharY" type="int" value="16"/>
-   <property name="trigger" value="loadMap"/>
-  </properties>
-  <data encoding="csv">
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,231,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0
-</data>
- </layer>
- <layer id="6" name="message" width="12" height="12">
-  <properties>
-   <property name="text" value="Every book falls apart into a pile of dust as soon as it's touched."/>
-   <property name="trigger" value="msgBox"/>
-  </properties>
-  <data encoding="csv">
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,35,35,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0
-</data>
- </layer>
- <layer id="7" name="plantmsg" width="12" height="12">
-  <properties>
-   <property name="text" value="This plant could use some watering."/>
-   <property name="trigger" value="msgBox"/>
-  </properties>
-  <data encoding="csv">
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,35,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0
-</data>
- </layer>
  <objectgroup id="9" name="objects">
   <object id="1" name="character" gid="1025" x="111.879" y="98.065" width="16" height="32">
    <properties>
@@ -151,6 +92,42 @@
     <property name="tileYLeft" type="int" value="3"/>
     <property name="tileYRight" type="int" value="1"/>
     <property name="tileYUp" type="int" value="2"/>
+   </properties>
+  </object>
+  <object id="2" name="book1" gid="1168" x="48.8555" y="68.0738" width="16" height="16">
+   <properties>
+    <property name="tileXAnim" type="bool" value="false"/>
+    <property name="tileXAnimStage2Frame" type="int" value="19"/>
+    <property name="tileXMax" type="int" value="19"/>
+    <property name="tileXMin" type="int" value="15"/>
+    <property name="tileXTime" type="int" value="400"/>
+   </properties>
+  </object>
+  <object id="3" name="booktrigger" x="48" y="80" width="14.3333" height="14.3333">
+   <properties>
+    <property name="text" value="Don't forget the most important thing"/>
+    <property name="trigger" value="msgBox"/>
+    <property name="triggerAnim" value="book1"/>
+   </properties>
+  </object>
+  <object id="6" name="planttrigger" x="80" y="64" width="14.6667" height="14.6667">
+   <properties>
+    <property name="text" value="What a nice plant"/>
+    <property name="trigger" value="msgBox"/>
+   </properties>
+  </object>
+  <object id="7" name="shelftrigger" x="29.6667" y="125.667" width="16" height="16">
+   <properties>
+    <property name="text" value="Every book falls apart into a pile of dust as soon as it's touched."/>
+    <property name="trigger" value="msgBox"/>
+   </properties>
+  </object>
+  <object id="8" name="bookshelftrigger" x="80" y="160" width="16" height="16">
+   <properties>
+    <property name="mapFile" value="zeldish.tmx"/>
+    <property name="setCharX" type="int" value="19"/>
+    <property name="setCharY" type="int" value="16"/>
+    <property name="trigger" value="loadMap"/>
    </properties>
   </object>
  </objectgroup>

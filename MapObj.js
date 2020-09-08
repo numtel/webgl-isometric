@@ -5,30 +5,34 @@ export default class MapObj {
     this.index = index;
     this.curPath = null;
     this.onArrival = null;
+    this.onAnimEnd = null;
     this.lastFrameDelta = 0;
-    this.texture = `u_obj_${this.tileset.imgSource.replace(/[^a-zA-Z0-9]/g, '_')}`;
-    if(!(this.texture in this.parent.textures))
-      this.parent.createImageTexture(this.texture, this.tileset.image);
+    if(this.gid) {
+      this.texture = `u_obj_${this.tileset.imgSource.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      if(!(this.texture in this.parent.textures))
+        this.parent.createImageTexture(this.texture, this.tileset.image);
 
-    // Some params are shared with the GPU
-    Object.entries({
-      x: `OBJ${this.index}_X`,
-      y: `OBJ${this.index}_Y`,
-      tileX: `OBJ${this.index}_TILEX`,
-      tileY: `OBJ${this.index}_TILEY`,
-    }).forEach(prop => {
-      parent.options.dataValues[prop[1]] = this[prop[0]];
-      Object.defineProperty(this, prop[0], {
-        get() {
-          return parent[prop[1]];
-        },
-        set(value) {
-          parent[prop[1]] = value;
-        }
-      })
-    });
+      // Some params are shared with the GPU
+      Object.entries({
+        x: `OBJ${this.index}_X`,
+        y: `OBJ${this.index}_Y`,
+        tileX: `OBJ${this.index}_TILEX`,
+        tileY: `OBJ${this.index}_TILEY`,
+      }).forEach(prop => {
+        parent.options.dataValues[prop[1]] = this[prop[0]];
+        Object.defineProperty(this, prop[0], {
+          get() {
+            return parent[prop[1]];
+          },
+          set(value) {
+            parent[prop[1]] = value;
+          }
+        })
+      });
+    }
   }
   onFrame(delta) {
+    if(this.isRect) return;
     if(this.curPath) {
       if(this.curPath.length === 0){
         this.curPath = null;
@@ -61,15 +65,22 @@ export default class MapObj {
           else this.tileY = this.tileYDown;
         }
       }
-    } else if(this.tileXAnim) {
+    }
+    if(this.tileXAnim) {
       if(delta - this.lastFrameDelta > this.tileXTime) {
-        this.tileX = this.tileX === this.tileXMax ? this.tileXMin : this.tileX + 1;
+        if(this.tileXMax === this.tileX) {
+          this.onAnimEnd && this.onAnimEnd();
+        }
+        this.tileX = this.tileX === this.tileXMax ?
+          this.tileXAnimStage2Frame || this.tileXMin : this.tileX + 1;
         this.lastFrameDelta = delta;
       }
     }
   }
   chunk() {
+    if(!this.gid) return '';
     const off = { x: this.offsetX.toFixed(3), y: this.offsetY.toFixed(3) };
+    // TODO zIndex by object y values?
     return `
       if(tile_real.x >= OBJ${this.index}_X + ${off.x} &&
          tile_real.x <=  OBJ${this.index}_X + ${off.x} + ${this.width.toFixed(3)} &&

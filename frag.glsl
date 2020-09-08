@@ -84,9 +84,6 @@ void main() {
     // Below character layers
     comp = blend(comp, texture2D(u_under_char, layer_pos));
 
-    // Below character animation layers
-    comp = blend(comp, texture2D(u_anim_below, layer_pos));
-
     // Cursor highlight
     if(floor(tile_real) == floor(cursor_tile)) {
       comp.g = 1.;
@@ -95,9 +92,6 @@ void main() {
     #include <draw_objects>
     // Above character layers
     comp = blend(comp, texture2D(u_above_char, layer_pos));
-
-    // Above character animation layers
-    comp = blend(comp, texture2D(u_anim_above, layer_pos));
 
   }
 

@@ -135,16 +135,25 @@ class TMXObjectGroup {
     this.children = {};
     el.childNodes.forEach(child => {
       if(child.nodeName !== 'object') return;
-      const gid = parseInt(child.getAttribute('gid'), 10);
-      const tileset = this.parent.getTileSet(gid);
-      const tileSetIndex = gid - tileset.firstgid;
+      const obj = {};
+      const gidValue = child.getAttribute('gid')
+      if(gidValue) {
+        const gid = parseInt(gidValue, 10);
+        const tileset = this.parent.getTileSet(gid);
+        const tileSetIndex = gid - tileset.firstgid;
+        Object.assign(obj, {
+          gid,
+          tileset,
+          tileX: tileSetIndex % tileset.columns,
+          tileY: Math.floor(tileSetIndex / tileset.columns),
+          offsetY: 0,
+          offsetX: 0,
+        });
+      } else {
+        obj.isRect = true;
+      }
       this.children[child.getAttribute('name')] = {
-        gid,
-        tileset,
-        tileX: tileSetIndex % tileset.columns,
-        tileY: Math.floor(tileSetIndex / tileset.columns),
-        offsetY: 0,
-        offsetX: 0,
+        ...obj,
         width: parseInt(child.getAttribute('width'), 10) / parent.tileWidth,
         height: parseInt(child.getAttribute('height'), 10) / parent.tileHeight,
         x: parseFloat(child.getAttribute('x')) / parent.tileWidth,

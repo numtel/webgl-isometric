@@ -7,19 +7,32 @@
 
 Each layer can have a selection of the following properties:
 
-> Only tile layers supported so far!
-
 Name | Description
 -----|----------------
 `aboveChar` | `bool` Layer is to be drawn above the character
-`frame` | `int` Layer is part of an animation, display on this frame number
-`frame_max` | `int` Must be specified if `frame` is given, the total number of frames in the animation sequare
 `blocking` | `boolean` Layer tiles will block the character's path
+
+## Tile objects
+
+Tile objects may be animated along a horizontal strip in a sprite sheet.
+
+Property | Description
+--------|--------------
+`tileXAnim` | `boolean` True for animation to play
+`tileXAnimStage2Frame` | `int` Optional. After animating to end, restart at this frame instead of `tileXMin`
+`tileXMax` | `int` Required for animating, the x-index in the sprite sheet at the end of the sequence
+`tileXMin` | `int` Required for animating, the x-index in the sprite sheet at the beginning of the sequence
+`tileXTime` | `int` Duration to show each frame in milliseconds
+
+## Available trigger actions
+
+Rectangular objects can perform actions when the character stops inside the area.
+
+Property | Description
+--------|----------------
 `trigger` | `string` These tiles invoke an action when stopped atop. Layer will not be drawn. Each trigger defines its own additional properties.
 
-### Available trigger actions
-
-#### `loadMap`
+### `loadMap`
 
 Transport the player to a new scene. All properties required.
 
@@ -29,6 +42,11 @@ Additional Property | Description
 `setCharX` | `string` Character starting point in new map
 `setCharY` | `string` Character starting point in new map
 
-#### `msgBox`
+### `msgBox`
 
-Display a message to the player. String `text` property required.
+Display a message to the player.
+
+Additional Property | Description
+-----|-----------------
+`text` | `string` Required
+`triggerAnim` | `string` Optional, named of a tile object with `tileXAnim` initialized as `false`
