@@ -18,6 +18,7 @@ export default class OrthoView {
     this[STOPPED] = false;
     this.nextTextureSlot = 0;
     this.textures = {};
+    this.readyForTextures = false;
     this.element = document.createElement('canvas');
     this.gl = this.element.getContext('webgl');
     this.program = this.gl.createProgram();
@@ -119,6 +120,10 @@ export default class OrthoView {
       throw this.gl.getProgramInfoLog(this.program);
 
     this.gl.useProgram(this.program);
+    this.readyForTextures = true;
+    for(let texture of Object.values(this.textures)) {
+      texture.init();
+    }
 
     // Construct simple 2D geometry
     // Vertex Positions, 2 triangles
@@ -339,10 +344,16 @@ class ImageTexture {
   constructor(parent, slot, name, image) {
     this.parent = parent;
     this.slot = slot;
-    this.parent._createTexture(name, slot);
+    this.name = name;
+    this.image = image;
+    this.init();
+  }
+  init() {
+    if(!this.parent.readyForTextures) return;
+    this.parent._createTexture(this.name, this.slot);
     this.parent.gl.texImage2D(
       this.parent.gl.TEXTURE_2D, 0, this.parent.gl.RGBA,
-      this.parent.gl.RGBA, this.parent.gl.UNSIGNED_BYTE, image);
+      this.parent.gl.RGBA, this.parent.gl.UNSIGNED_BYTE, this.image);
   }
   update(image) {
     this.parent.gl.activeTexture(this.parent.gl.TEXTURE0 + this.slot);
@@ -355,13 +366,20 @@ class DataTexture {
   constructor(parent, slot, name, width, height, pixels) {
     this.parent = parent;
     this.slot = slot;
-    this.parent._createTexture(name, slot);
+    this.width = width;
+    this.height = height;
+    this.pixels = pixels;
+    this.init();
+  }
+  init() {
+    if(!this.parent.readyForTextures) return;
+    this.parent._createTexture(this.name, this.slot);
     this.parent.gl.texImage2D(
       this.parent.gl.TEXTURE_2D,
       0,
-      this.parent.gl.RGBA, width, height, 0,
+      this.parent.gl.RGBA, this.width, this.height, 0,
       this.parent.gl.RGBA, this.parent.gl.UNSIGNED_BYTE,
-      pixels
+      this.pixels
     );
   }
   update(width, height, pixels) {

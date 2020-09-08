@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.1" orientation="orthogonal" renderorder="right-down" width="60" height="60" tilewidth="16" tileheight="16" infinite="0" nextlayerid="22" nextobjectid="16">
+<map version="1.4" tiledversion="1.4.1" orientation="orthogonal" renderorder="right-down" width="60" height="60" tilewidth="16" tileheight="16" infinite="0" nextlayerid="22" nextobjectid="18">
  <tileset firstgid="1" name="Overworld" tilewidth="16" tileheight="16" tilecount="4096" columns="64">
   <image source="assets/Overworld.png" width="1024" height="1024"/>
  </tileset>
@@ -8,6 +8,9 @@
  </tileset>
  <tileset firstgid="4225" name="character_wide" tilewidth="32" tileheight="32" tilecount="64" columns="8">
   <image source="assets/character.png" width="256" height="256"/>
+ </tileset>
+ <tileset firstgid="4289" name="objects" tilewidth="16" tileheight="16" tilecount="660" columns="33">
+  <image source="assets/objects.png" width="528" height="320"/>
  </tileset>
  <layer id="1" name="ground" width="60" height="60">
   <data encoding="csv">
@@ -220,6 +223,14 @@
     <property name="tileYUp" type="int" value="6"/>
    </properties>
   </object>
+  <object id="16" name="heart1" gid="4557" x="366.5" y="350.5" width="16" height="16">
+   <properties>
+    <property name="tileXAnim" type="bool" value="true"/>
+    <property name="tileXMax" type="int" value="7"/>
+    <property name="tileXMin" type="int" value="4"/>
+    <property name="tileXTime" type="int" value="200"/>
+   </properties>
+  </object>
   <object id="15" name="character" gid="4097" x="367.333" y="298.667" width="16" height="32">
    <properties>
     <property name="offsetY" type="int" value="1"/>
@@ -232,6 +243,14 @@
     <property name="tileYLeft" type="int" value="3"/>
     <property name="tileYRight" type="int" value="1"/>
     <property name="tileYUp" type="int" value="2"/>
+   </properties>
+  </object>
+  <object id="17" name="heart2" gid="4388" x="418" y="321" width="16" height="16">
+   <properties>
+    <property name="tileXAnim" type="bool" value="true"/>
+    <property name="tileXMax" type="int" value="3"/>
+    <property name="tileXMin" type="int" value="0"/>
+    <property name="tileXTime" type="int" value="300"/>
    </properties>
   </object>
  </objectgroup>

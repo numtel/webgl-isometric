@@ -61,6 +61,11 @@ export default class MapObj {
           else this.tileY = this.tileYDown;
         }
       }
+    } else if(this.tileXAnim) {
+      if(delta - this.lastFrameDelta > this.tileXTime) {
+        this.tileX = this.tileX === this.tileXMax ? this.tileXMin : this.tileX + 1;
+        this.lastFrameDelta = delta;
+      }
     }
   }
   chunk() {
