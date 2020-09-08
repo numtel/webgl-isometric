@@ -15,7 +15,13 @@ export default class OrthoView {
       onFrame: null,
     }, options);
 
+    this[STOPPED] = false;
+    this.nextTextureSlot = 0;
+    this.textures = {};
     this.element = document.createElement('canvas');
+    this.gl = this.element.getContext('webgl');
+    this.program = this.gl.createProgram();
+
     if(this.options.fullPage) {
       this.element.style.width = '100vw';
       this.element.style.height = '100vh';
@@ -28,10 +34,9 @@ export default class OrthoView {
       ({...out, [def[0]]: new MapObj(this, def[1], index) }), {}));
     this.options.chunkMap['draw_objects'] =
       Object.keys(this.options.objects).map(obj => this[obj].chunk()).join('\n');
+    this.options.chunkMap['object_textures'] =
+      Object.keys(this.textures).map(texture => `uniform sampler2D ${texture};`).join('\n');
 
-    this.gl = null;
-    this.program = null;
-    this[STOPPED] = false;
     const dataValues = Object.entries(Object.assign({
       CANVAS_WIDTH: this.element.width,
       CANVAS_HEIGHT: this.element.height,
@@ -68,7 +73,6 @@ export default class OrthoView {
     this.dataValuesChunk = dataValuesChunks.join('\n') + '\n';
   }
   async init() {
-    this.gl = this.element.getContext('webgl');
     this.gl.clearColor(0, 0, 0, 1);
 
     const vertexShader = this.gl.createShader(this.gl.VERTEX_SHADER);
@@ -107,7 +111,6 @@ export default class OrthoView {
       throw this.gl.getShaderInfoLog(fragmentShader);
     }
 
-    this.program = this.gl.createProgram();
     this.gl.attachShader(this.program, vertexShader);
     this.gl.attachShader(this.program, fragmentShader);
     this.gl.linkProgram(this.program);
@@ -287,6 +290,9 @@ export default class OrthoView {
 
     const draw = (delta) => {
       if(this[STOPPED] === true) return;
+      for(let key of Object.keys(this.options.objects)) {
+        this[key].onFrame(delta);
+      }
       this.options.onFrame && this.options.onFrame(delta);
       this.gl.uniform1fv(this.dataLocation, this.dataValues);
       this.gl.clear(this.gl.COLOR_BUFFER_BIT);
@@ -313,39 +319,60 @@ export default class OrthoView {
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
   }
-  createDataTexture(name, slot, width, height, pixels) {
+  createDataTexture(name, width, height, pixels) {
     // Missing typescript?
     if(!(pixels instanceof Uint8Array)) throw new Error('Uint8Array_pixels_only');
-    this._createTexture(name, slot);
-    this.gl.texImage2D(
-      this.gl.TEXTURE_2D,
-      0,
-      this.gl.RGBA, width, height, 0,
-      this.gl.RGBA, this.gl.UNSIGNED_BYTE,
-      pixels
-    );
+    return this.textures[name] =
+      new DataTexture(this, this.nextTextureSlot++, name, width, height, pixels);
   }
-  updateDataTexture(slot, width, height, pixels) {
-    this.gl.activeTexture(this.gl.TEXTURE0 + slot);
-    this.gl.texImage2D(
-      this.gl.TEXTURE_2D,
-      0,
-      this.gl.RGBA, width, height, 0,
-      this.gl.RGBA, this.gl.UNSIGNED_BYTE,
-      pixels
-    );
-  }
-  createImageTexture(name, slot, image) {
-    this._createTexture(name, slot);
-    this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA,this.gl.UNSIGNED_BYTE, image);
-  }
-  updateImageTexture(slot, image) {
-    this.gl.activeTexture(this.gl.TEXTURE0 + slot);
-    this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA,this.gl.UNSIGNED_BYTE, image);
+  createImageTexture(name, image) {
+    return this.textures[name] =
+      new ImageTexture(this, this.nextTextureSlot++, name, image);
   }
   center(tileX, tileY) {
     this.ORIGIN_X = (-tileX * this.TILE_SIZE) + this.CANVAS_WIDTH / 2;
     this.ORIGIN_Y = (-tileY * this.TILE_SIZE) + this.CANVAS_HEIGHT / 2;
+  }
+}
+
+class ImageTexture {
+  constructor(parent, slot, name, image) {
+    this.parent = parent;
+    this.slot = slot;
+    this.parent._createTexture(name, slot);
+    this.parent.gl.texImage2D(
+      this.parent.gl.TEXTURE_2D, 0, this.parent.gl.RGBA,
+      this.parent.gl.RGBA, this.parent.gl.UNSIGNED_BYTE, image);
+  }
+  update(image) {
+    this.parent.gl.activeTexture(this.parent.gl.TEXTURE0 + this.slot);
+    this.parent.gl.texImage2D(this.parent.gl.TEXTURE_2D, 0,
+      this.parent.gl.RGBA, this.parent.gl.RGBA,this.parent.gl.UNSIGNED_BYTE, image);
+  }
+}
+
+class DataTexture {
+  constructor(parent, slot, name, width, height, pixels) {
+    this.parent = parent;
+    this.slot = slot;
+    this.parent._createTexture(name, slot);
+    this.parent.gl.texImage2D(
+      this.parent.gl.TEXTURE_2D,
+      0,
+      this.parent.gl.RGBA, width, height, 0,
+      this.parent.gl.RGBA, this.parent.gl.UNSIGNED_BYTE,
+      pixels
+    );
+  }
+  update(width, height, pixels) {
+    this.parent.gl.activeTexture(this.parent.gl.TEXTURE0 + this.slot);
+    this.parent.gl.texImage2D(
+      this.parent.gl.TEXTURE_2D,
+      0,
+      this.parent.gl.RGBA, width, height, 0,
+      this.parent.gl.RGBA, this.parent.gl.UNSIGNED_BYTE,
+      pixels
+    );
   }
 }
 

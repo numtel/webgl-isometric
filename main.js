@@ -7,24 +7,10 @@ async function loadGame(mapFile) {
   const map = new TMXMap;
   await map.load(mapFile);
 
-  let curCharPath = null;
-  let charSpeed = 0.1;
-
   const game = new OrthoView({
     fullPage: true,
     objects: {
-      character: {
-        x: map.properties.initCharX,
-        y: map.properties.initCharY,
-        texture: 'u_char',
-        tileset: map.tileSets.find(ts => ts.name === 'character'),
-        tileX: 0,
-        tileY: 0,
-        offsetY: -1,
-        offsetX: 0,
-        width: 1,
-        height: 2,
-      },
+      ...map.allObjects(),
     },
     dataValues: {
       // Override default
@@ -50,7 +36,6 @@ async function loadGame(mapFile) {
           'uniform sampler2D u_above_char;',
           'uniform sampler2D u_anim_below;',
           'uniform sampler2D u_anim_above;',
-          'uniform sampler2D u_char;',
         ].join('\n'),
     },
     onFrame(delta) {
@@ -59,49 +44,19 @@ async function loadGame(mapFile) {
 
       if(game.FRAME_NUM % 7 === 0) animationLayer();
 
-      if(curCharPath) {
-        if(curCharPath.length === 0){
-          curCharPath = null;
-          game.character.tileX = 0;
-          const props = triggerTiles &&
-            triggerTiles[Math.round(game.character.y)][Math.round(game.character.x)];
-          if(props && props.trigger && (props.trigger in triggers))
-            triggers[props.trigger](props);
-          return;
-        }
-        const next = curCharPath[0];
-        const xDiff = game.character.x - next.y;
-        const yDiff = game.character.y - next.x;
-        const distToNext = Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
-        if(distToNext < charSpeed) {
-          curCharPath.shift();
-          game.character.x -= xDiff;
-          game.character.y -= yDiff;
-        } else {
-          game.character.x -= xDiff * (1/distToNext) * charSpeed;
-          game.character.y -= yDiff * (1/distToNext) * charSpeed;
-
-          if(game.FRAME_NUM % 9 === 0) {
-            game.character.tileX = game.character.tileX === 3 ? 0 : game.character.tileX + 1;
-          }
-
-          if(Math.abs(xDiff) > Math.abs(yDiff)) {
-            if(xDiff > 0) game.character.tileY = 3;
-            else game.character.tileY = 1;
-          } else {
-            if(yDiff > 0) game.character.tileY = 2;
-            else game.character.tileY = 0;
-          }
-        }
-      }
     },
     onTapOrClick(event, tilePos) {
       if(tilePos.x > 0 && tilePos.x < map.width
           && tilePos.y > 0 && tilePos.y < map.height) {
         // Move character
-        curCharPath = astar.search(blockingGraph,
+        game.character.curPath = astar.search(blockingGraph,
           blockingGraph.grid[Math.round(game.character.y)][Math.round(game.character.x)],
           blockingGraph.grid[Math.floor(tilePos.y)][Math.floor(tilePos.x)]);
+        if(game.character2) {
+          game.character2.curPath = astar.search(blockingGraph,
+            blockingGraph.grid[Math.round(game.character2.y)][Math.round(game.character2.x)],
+            blockingGraph.grid[Math.floor(tilePos.y)][Math.floor(tilePos.x)]);
+        }
       }
     },
   });
@@ -138,25 +93,31 @@ async function loadGame(mapFile) {
   const triggerTiles = map.tileMap(
     (layer) => !!layer.properties.trigger,
     (layer, x, y, tileGid, prev) => layer.properties);
+  game.character.onArrival = () => {
+    const props = triggerTiles &&
+      triggerTiles[Math.round(game.character.y)][Math.round(game.character.x)];
+    if(props && props.trigger && (props.trigger in triggers))
+      triggers[props.trigger](props);
+  };
 
   // Aggregate all animated frames into a single layer
   let animFrameCount = 0;
   const animFilterBelow = ({ properties:{ frame, frame_max, aboveChar } }) =>
     !(aboveChar || !frame || !frame_max || frame-1 !== animFrameCount % frame_max);
   const animCanvasBelow = map.draw(animFilterBelow);
-  game.createImageTexture('u_anim_below', 0, animCanvasBelow);
+  const animBelowTexture = game.createImageTexture('u_anim_below', animCanvasBelow);
 
   const animFilterAbove = ({ properties:{ frame, frame_max, aboveChar } }) =>
     !(!aboveChar || !frame || !frame_max || frame-1 !== animFrameCount % frame_max);
   const animCanvasAbove = map.draw(animFilterAbove);
-  game.createImageTexture('u_anim_above', 1, animCanvasAbove);
+  const animAboveTexture = game.createImageTexture('u_anim_above', animCanvasAbove);
 
   function animationLayer() {
     map.draw(animFilterBelow, animCanvasBelow);
-    game.updateImageTexture(0, animCanvasBelow);
+    animBelowTexture.update(animCanvasBelow);
 
     map.draw(animFilterAbove, animCanvasAbove);
-    game.updateImageTexture(1, animCanvasAbove);
+    animAboveTexture.update(animCanvasAbove);
 
     animFrameCount++;
     if(animFrameCount > Math.pow(2,32) - 1) animFrameCount = 0;
@@ -167,16 +128,13 @@ async function loadGame(mapFile) {
     !layer.properties.frame
     && !layer.properties.aboveChar
     && !layer.properties.trigger)
-  game.createImageTexture('u_under_char', 2, underCharCanvas);
+  game.createImageTexture('u_under_char', underCharCanvas);
 
   const aboveCharCanvas = map.draw((layer, index) =>
     !layer.properties.frame
     && layer.properties.aboveChar
     && !layer.properties.trigger)
-  game.createImageTexture('u_above_char', 3, aboveCharCanvas);
-
-  // Character tileset image from tmx file
-  game.createImageTexture('u_char', 4, game.character.tileset.image);
+  game.createImageTexture('u_above_char', aboveCharCanvas);
 
   document.body.append(game.element);
 

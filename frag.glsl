@@ -1,5 +1,6 @@
 varying vec2 uv_pos;
 #include <map_uniforms>
+#include <object_textures>
 const float PI = 3.1415926535897;
 
 // from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl

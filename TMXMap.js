@@ -7,6 +7,7 @@ export default class TMXMap {
     this.tileHeight = null;
     this.tileSets = [];
     this.layers = [];
+    this.objectGroups = [];
     this.loaded = false;
   }
   async load(filename) {
@@ -37,6 +38,9 @@ export default class TMXMap {
         case 'layer':
           this.layers.push(new TMXLayer(this, el));
           break;
+        case 'objectgroup':
+          this.objectGroups.push(new TMXObjectGroup(this, el));
+          break;
         case '#text':
         case 'properties':
           // noop
@@ -49,8 +53,14 @@ export default class TMXMap {
     await Promise.all(this.tileSets.map(tileSet => tileSet.load()));
     this.loaded = true;
   }
+  allObjects() {
+    const out = {};
+    for(let objGrp of this.objectGroups) {
+      Object.assign(out, objGrp.children);
+    }
+    return out;
+  }
   getTileSet(tileGid) {
-    if(!this.loaded) throw new Error('load_required');
     for(let i=0; i<this.tileSets.length; i++) {
       const tileSet = this.tileSets[i];
       if(tileGid >= tileSet.firstgid && tileGid < tileSet.lastgid)
@@ -116,6 +126,35 @@ export default class TMXMap {
   }
 }
 
+class TMXObjectGroup {
+  constructor(parent, el) {
+    this.parent = parent;
+    this.el = el;
+    this.name = el.getAttribute('name');
+    this.properties = new TMXProperties(el);
+    this.children = {};
+    el.childNodes.forEach(child => {
+      if(child.nodeName !== 'object') return;
+      const gid = parseInt(child.getAttribute('gid'), 10);
+      const tileset = this.parent.getTileSet(gid);
+      const tileSetIndex = gid - tileset.firstgid;
+      this.children[child.getAttribute('name')] = {
+        gid,
+        tileset,
+        tileX: tileSetIndex % tileset.columns,
+        tileY: Math.floor(tileSetIndex / tileset.columns),
+        offsetY: 0,
+        offsetX: 0,
+        width: parseInt(child.getAttribute('width'), 10) / parent.tileWidth,
+        height: parseInt(child.getAttribute('height'), 10) / parent.tileHeight,
+        x: parseFloat(child.getAttribute('x')) / parent.tileWidth,
+        y: parseFloat(child.getAttribute('y')) / parent.tileHeight,
+        ...(new TMXProperties(child)),
+      };
+    });
+  }
+}
+
 class TMXTileSet {
   constructor(parent, el) {
     this.parent = parent;
@@ -128,12 +167,12 @@ class TMXTileSet {
     this.tileCount = parseInt(el.getAttribute('tilecount'), 10);
     this.columns = parseInt(el.getAttribute('columns'), 10);
     this.lastgid = this.firstgid + this.tileCount;
+    this.imgSource = el.querySelector('image').getAttribute('source');
   }
   load() {
     return new Promise((resolve, reject) => {
-      const imageEl = this.el.querySelector('image');
       const image = new Image();
-      image.src = imageEl.getAttribute('source');
+      image.src = this.imgSource;
       image.addEventListener('load', () => {
         this.image = image;
         resolve(image);
@@ -178,6 +217,9 @@ class TMXProperties {
             break;
           case 'int':
             this[name] = parseInt(value, 10);
+            break;
+          case 'float':
+            this[name] = parseFloat(value);
             break;
           default:
             this[name] = value;

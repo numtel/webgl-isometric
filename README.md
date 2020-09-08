@@ -3,15 +3,6 @@
 * Maps created with [Tiled Map Editor](https://thorbjorn.itch.io/tiled)
 * Art under CC license from [Open Game Art](https://opengameart.org/content/zelda-like-tilesets-and-sprites)
 
-# Map Properties
-
-The root `map` node must contain the following properties:
-
-Name | Description
-----|-----------
-`initCharX` | `int` Tile X position for character starting point
-`initCharY` | `int` Tile Y position for character starting point
-
 ## Layer Properties
 
 Each layer can have a selection of the following properties:
