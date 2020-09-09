@@ -39,8 +39,8 @@ export default class MovableObject {
         return;
       }
       const next = this.curPath[0];
-      const xDiff = this.x - next.y;
-      const yDiff = this.y - next.x;
+      const xDiff = this.x - next.x;
+      const yDiff = this.y - next.y;
       const distToNext = Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
       if(distToNext < this.speed) {
         this.curPath.shift();

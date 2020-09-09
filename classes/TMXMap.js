@@ -10,6 +10,7 @@ export default class TMXMap {
     this.tileWidth = null;
     this.tileHeight = null;
     this.properties = null;
+    this.baseURL = '';
     this.tileSets = [];
     this.layers = [];
     this.objects = [];
@@ -18,6 +19,7 @@ export default class TMXMap {
   async load(filename) {
     const parser = new DOMParser;
     const response = await fetch(filename);
+    this.baseURL = response.url.slice(0, response.url.lastIndexOf('/') + 1);
     const text = await response.text();
     const parsed = parser.parseFromString(text, 'text/xml');
     const mapEl = this.el = parsed.documentElement;
@@ -136,19 +138,19 @@ export default class TMXMap {
     return canvas;
   }
   tileMap(layerFilterFun, foundGidFun, defaultValue) {
-    const out = new Array(this.height);
+    const out = new Array(this.width);
     let foundAny = false;
     for(let i=0; i<this.layers.length; i++) {
       if(layerFilterFun && !layerFilterFun(this.layers[i], i)) continue;
       foundAny = true;
-      for(let y=0; y<this.height; y++) {
-        if(out[y] === undefined) out[y] = new Array(this.width);
-        for(let x=0; x<this.width; x++) {
+      for(let x=0; x<this.width; x++) {
+        if(out[x] === undefined) out[x] = new Array(this.height);
+        for(let y=0; y<this.height; y++) {
           const tileNum = (y * this.height) + x;
           const tileGid = this.layers[i].data[tileNum];
-          if(out[y][x] === undefined) out[y][x] = defaultValue;
+          if(out[x][y] === undefined) out[x][y] = defaultValue;
           if(tileGid === 0) continue;
-          out[y][x] = foundGidFun(this.layers[i], x, y, tileGid, out[y][x]);
+          out[x][y] = foundGidFun(this.layers[i], x, y, tileGid, out[x][y]);
         }
       }
     }
@@ -213,7 +215,7 @@ class TMXTileSet {
   load() {
     return new Promise((resolve, reject) => {
       const image = new Image();
-      image.src = this.imgSource;
+      image.src = this.parent.baseURL + this.imgSource;
       image.addEventListener('load', () => {
         this.image = image;
         resolve(image);

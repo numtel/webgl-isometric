@@ -1,8 +1,7 @@
-import OrthoView from './OrthoView.js';
-import TMXMap from './TMXMap.js';
-import MovableObject from './MovableObject.js';
-
-import { astar, Graph } from './astar.js';
+import MovableObject from '../classes/MovableObject.js';
+import OrthoView from '../classes/OrthoView.js';
+import PathFind from '../classes/PathFind.js';
+import TMXMap from '../classes/TMXMap.js';
 
 async function loadGame(mapFile) {
   const map = new TMXMap(MovableObject);
@@ -10,13 +9,14 @@ async function loadGame(mapFile) {
   const character = map.findObj('character');
   const character2 = map.findObj('character2');
 
-  const blockingTiles = new Graph(map.tileMap(
+  const pathFinder = new PathFind(map.tileMap(
     (layer) => layer.properties.blocking,
     (layer, x, y, tileGid, prev) => 0,
     1));
 
   const game = new OrthoView({
     fullPage: true,
+    fragmentShader: 'game/frag.glsl',
     dataValues: {
       // Override default
       TILE_SIZE: 32,
@@ -53,14 +53,10 @@ async function loadGame(mapFile) {
       if(tilePos.x > 0 && tilePos.x < map.width
           && tilePos.y > 0 && tilePos.y < map.height) {
         // Move character
-        const newPath = astar.search(blockingTiles,
-          blockingTiles.grid[Math.round(character.y)][Math.round(character.x)],
-          blockingTiles.grid[Math.floor(tilePos.y)][Math.floor(tilePos.x)]);
+        const newPath = pathFinder.search(character, tilePos);
         if(newPath.length) character.curPath = newPath;
         if(character2) {
-          character2.curPath = astar.search(blockingTiles,
-            blockingTiles.grid[Math.round(character2.y)][Math.round(character2.x)],
-            blockingTiles.grid[Math.floor(tilePos.y)][Math.floor(tilePos.x)]);
+          character2.curPath = pathFinder.search(character2, tilePos);
         }
       }
     },
@@ -103,7 +99,7 @@ async function loadGame(mapFile) {
       oldGame.BLACK_CIRCLE_Y = character.y;
       oldGame.BLACK_CIRCLE_FRAME = game.FRAME_NUM;
 
-      const newMount = await loadGame(mapFile);
+      const newMount = await loadGame(map.baseURL + mapFile);
       oldGame.stop();
       game.element.parentNode.removeChild(game.element);
       Object.assign(retval, newMount);
@@ -130,4 +126,4 @@ async function loadGame(mapFile) {
   return retval;
 }
 
-loadGame('inside.tmx').then(mount => window.mount = mount)
+loadGame('maps/inside.tmx').then(mount => window.mount = mount)

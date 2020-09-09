@@ -4,6 +4,18 @@
 // Implements the astar search algorithm in javascript using a Binary Heap.
 // Includes Binary Heap (with modifications) from Marijn Haverbeke.
 // http://eloquentjavascript.net/appendix2.html
+export default class PathFind {
+  constructor(blockingMap) {
+    this.graph = new Graph(blockingMap);
+  }
+  search(from, to) {
+    return astar.search(this.graph,
+      this.graph.grid[Math.round(from.x)][Math.round(from.y)],
+      this.graph.grid[Math.floor(to.x)][Math.floor(to.y)]
+    );
+  }
+
+}
 
 function pathTo(node) {
   var curr = node;
@@ -21,7 +33,7 @@ function getHeap() {
   });
 }
 
-export const astar = {
+const astar = {
   /**
   * Perform an A* Search on a graph given a start and end node.
   * @param {Graph} graph
@@ -142,7 +154,7 @@ export const astar = {
  * @param {Object} [options]
  * @param {bool} [options.diagonal] Specifies whether diagonal moves are allowed
  */
-export function Graph(gridIn, options) {
+function Graph(gridIn, options) {
   options = options || {};
   this.nodes = [];
   this.diagonal = !!options.diagonal;
