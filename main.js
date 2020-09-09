@@ -1,11 +1,14 @@
 import OrthoView from './OrthoView.js';
 import TMXMap from './TMXMap.js';
+import MovableObject from './MovableObject.js';
 
 import { astar, Graph } from './astar.js';
 
 async function loadGame(mapFile) {
-  const map = new TMXMap;
+  const map = new TMXMap(MovableObject);
   await map.load(mapFile);
+  const character = map.findObj('character');
+  const character2 = map.findObj('character2');
 
   const blockingTiles = new Graph(map.tileMap(
     (layer) => layer.properties.blocking,
@@ -14,7 +17,6 @@ async function loadGame(mapFile) {
 
   const game = new OrthoView({
     fullPage: true,
-    objects: map.allObjects(),
     dataValues: {
       // Override default
       TILE_SIZE: 32,
@@ -37,23 +39,27 @@ async function loadGame(mapFile) {
       map_uniforms: [
           'uniform sampler2D u_under_char;',
           'uniform sampler2D u_above_char;',
+          'uniform sampler2D u_obj;',
         ].join('\n'),
     },
     onFrame(delta) {
       if(game.FRAME_NUM > Math.pow(2, 32)) game.FRAME_NUM = 0;
       else game.FRAME_NUM++;
+
+      for(let grp of map.objects) for(let obj of grp.children) obj.onFrame(delta);
+      objTexture.update(map.drawObjectMap(objCanvas));
     },
     onTapOrClick(event, tilePos) {
       if(tilePos.x > 0 && tilePos.x < map.width
           && tilePos.y > 0 && tilePos.y < map.height) {
         // Move character
         const newPath = astar.search(blockingTiles,
-          blockingTiles.grid[Math.round(game.character.y)][Math.round(game.character.x)],
+          blockingTiles.grid[Math.round(character.y)][Math.round(character.x)],
           blockingTiles.grid[Math.floor(tilePos.y)][Math.floor(tilePos.x)]);
-        if(newPath.length) game.character.curPath = newPath;
-        if(game.character2) {
-          game.character2.curPath = astar.search(blockingTiles,
-            blockingTiles.grid[Math.round(game.character2.y)][Math.round(game.character2.x)],
+        if(newPath.length) character.curPath = newPath;
+        if(character2) {
+          character2.curPath = astar.search(blockingTiles,
+            blockingTiles.grid[Math.round(character2.y)][Math.round(character2.x)],
             blockingTiles.grid[Math.floor(tilePos.y)][Math.floor(tilePos.x)]);
         }
       }
@@ -69,48 +75,53 @@ async function loadGame(mapFile) {
     layer.properties.aboveChar && !layer.properties.hidden)
   game.createImageTexture('u_above_char', aboveCharCanvas);
 
-  const retval = { map, game };
+  const objCanvas = map.drawObjectMap();
+  const objTexture = game.createImageTexture('u_obj', objCanvas);
+
+  const retval = { map, game, character };
   await game.init();
-  game.center(game.character.x, game.character.y);
+  game.center(character.x, character.y);
 
   // Character actions
   const triggers = {
     async msgBox({ text, triggerAnim }) {
       if(triggerAnim) {
-        game[triggerAnim].tileXAnim = true;
-        game[triggerAnim].onAnimEnd = () => {
-          alert(text);
-          game[triggerAnim].onAnimEnd = null;
-          game[triggerAnim].tileXAnim = false;
-        };
+        const triggerObj = map.findObj(triggerAnim);
+        if(triggerObj) {
+          triggerObj.tileXAnim = true;
+          triggerObj.onAnimEnd = () => {
+            alert(text);
+            triggerObj.onAnimEnd = null;
+            triggerObj.tileXAnim = false;
+          };
+        }
       } else alert(text);
     },
     async loadMap({ mapFile, setCharX, setCharY }) {
       const oldGame = retval.game;
-      oldGame.BLACK_CIRCLE_X = oldGame.character.x;
-      oldGame.BLACK_CIRCLE_Y = oldGame.character.y;
+      oldGame.BLACK_CIRCLE_X = character.x;
+      oldGame.BLACK_CIRCLE_Y = character.y;
       oldGame.BLACK_CIRCLE_FRAME = game.FRAME_NUM;
 
       const newMount = await loadGame(mapFile);
       oldGame.stop();
       game.element.parentNode.removeChild(game.element);
-      retval.game = newMount.game;
-      retval.map = newMount.map;
-      newMount.game.character.x = setCharX;
-      newMount.game.character.y = setCharY;
+      Object.assign(retval, newMount);
+      newMount.character.x = setCharX;
+      newMount.character.y = setCharY;
       newMount.game.TILE_SIZE = oldGame.TILE_SIZE;
       newMount.game.center(setCharX, setCharY);
     },
   };
 
-  game.character.onArrival = () => {
-    for(let key of Object.keys(game.options.objects)) {
-      if(game[key].trigger && (game[key].trigger in triggers)
-          && game.character.x >= game[key].x
-          && game.character.x <= game[key].x + game[key].width
-          && game.character.y >= game[key].y
-          && game.character.y <= game[key].y + game[key].height) {
-        triggers[game[key].trigger](game[key]);
+  character.onArrival = () => {
+    for(let grp of map.objects) for(let obj of grp.children) {
+      if(obj.trigger && (obj.trigger in triggers)
+          && character.x >= obj.x
+          && character.x < obj.x + obj.width
+          && character.y >= obj.y - (obj.gid ? obj.height : 0)
+          && character.y < obj.y + (obj.gid ? 0 : obj.height)) {
+        triggers[obj.trigger](obj);
       }
     }
   };
@@ -119,4 +130,4 @@ async function loadGame(mapFile) {
   return retval;
 }
 
-window.mount = loadGame('inside.tmx');
+loadGame('inside.tmx').then(mount => window.mount = mount)

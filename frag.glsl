@@ -1,6 +1,5 @@
 varying vec2 uv_pos;
 #include <map_uniforms>
-#include <object_textures>
 const float PI = 3.1415926535897;
 
 // from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
@@ -88,8 +87,8 @@ void main() {
     if(floor(tile_real) == floor(cursor_tile)) {
       comp.g = 1.;
     }
+    comp = blend(comp, texture2D(u_obj, layer_pos));
 
-    #include <draw_objects>
     // Above character layers
     comp = blend(comp, texture2D(u_above_char, layer_pos));
 

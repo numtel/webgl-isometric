@@ -285,10 +285,10 @@
 </data>
  </layer>
  <objectgroup id="21" name="objects">
-  <object id="14" name="character2" gid="4521" x="392.5" y="245.5" width="32" height="32">
+  <object id="14" name="character2" gid="4521" x="400" y="240" width="32" height="32">
    <properties>
-    <property name="offsetX" type="float" value="-0.7"/>
-    <property name="offsetY" type="float" value="0.7"/>
+    <property name="offsetX" type="float" value="0.4"/>
+    <property name="offsetY" type="float" value="-0.8"/>
     <property name="speed" type="float" value="0.2"/>
     <property name="tileXIdle" type="int" value="4"/>
     <property name="tileXMax" type="int" value="7"/>
@@ -300,7 +300,7 @@
     <property name="tileYUp" type="int" value="6"/>
    </properties>
   </object>
-  <object id="16" name="heart1" gid="4841" x="366.5" y="350.5" width="16" height="16">
+  <object id="16" name="heart1" gid="4841" x="357.333" y="342.667" width="16" height="16">
    <properties>
     <property name="tileXAnim" type="bool" value="true"/>
     <property name="tileXMax" type="int" value="7"/>
@@ -308,9 +308,9 @@
     <property name="tileXTime" type="int" value="200"/>
    </properties>
   </object>
-  <object id="15" name="character" gid="4357" x="367.333" y="298.667" width="16" height="32">
+  <object id="15" name="character" gid="4357" x="448" y="226" width="16" height="32">
    <properties>
-    <property name="offsetY" type="int" value="1"/>
+    <property name="offsetY" type="int" value="-1"/>
     <property name="speed" type="float" value="0.1"/>
     <property name="tileXIdle" type="int" value="0"/>
     <property name="tileXMax" type="int" value="3"/>
@@ -322,7 +322,7 @@
     <property name="tileYUp" type="int" value="2"/>
    </properties>
   </object>
-  <object id="17" name="heart2" gid="4657" x="418" y="321" width="16" height="16">
+  <object id="17" name="heart2" gid="4657" x="388" y="280" width="16" height="16">
    <properties>
     <property name="tileXAnim" type="bool" value="true"/>
     <property name="tileXMax" type="int" value="3"/>
@@ -330,7 +330,7 @@
     <property name="tileXTime" type="int" value="300"/>
    </properties>
   </object>
-  <object id="18" name="fire1" gid="4661" x="444" y="334.667" width="16" height="16">
+  <object id="18" name="fire1" gid="4661" x="448" y="336" width="16" height="16">
    <properties>
     <property name="tileXAnim" type="bool" value="true"/>
     <property name="tileXMax" type="int" value="10"/>
@@ -338,9 +338,9 @@
     <property name="tileXTime" type="int" value="200"/>
    </properties>
   </object>
-  <object id="19" name="coin1" gid="4693" x="478.545" y="302.545" width="16" height="16">
+  <object id="19" name="coin1" gid="4693" x="480" y="304" width="16" height="16">
    <properties>
-    <property name="offsetY" type="int" value="1"/>
+    <property name="offsetY" type="int" value="0"/>
     <property name="text" value="Enough of me, and you'll be rich"/>
     <property name="tileXAnim" type="bool" value="true"/>
     <property name="tileXMax" type="int" value="3"/>
@@ -349,7 +349,7 @@
     <property name="trigger" value="msgBox"/>
    </properties>
   </object>
-  <object id="20" name="stump1" gid="5359" x="382.833" y="399.333" width="32" height="32">
+  <object id="20" name="stump1" gid="5359" x="384" y="400" width="32" height="32">
    <properties>
     <property name="tileXAnim" type="bool" value="true"/>
     <property name="tileXAnimStage2Frame" type="int" value="16"/>
@@ -358,7 +358,7 @@
     <property name="tileXTime" type="int" value="400"/>
    </properties>
   </object>
-  <object id="21" name="rock1" gid="5279" x="468.5" y="231.5" width="32" height="32">
+  <object id="21" name="rock1" gid="5279" x="480" y="240" width="32" height="32">
    <properties>
     <property name="tileXAnim" type="bool" value="true"/>
     <property name="tileXAnimStage2Frame" type="int" value="12"/>
@@ -367,9 +367,9 @@
     <property name="tileXTime" type="int" value="4000"/>
    </properties>
   </object>
-  <object id="22" name="firering1" gid="5295" x="296.833" y="366.833" width="32" height="32">
+  <object id="22" name="firering1" gid="5295" x="304" y="384" width="32" height="32">
    <properties>
-    <property name="offsetY" type="int" value="1"/>
+    <property name="offsetY" type="int" value="0"/>
     <property name="text" value="Wooosh!"/>
     <property name="tileXAnim" type="bool" value="true"/>
     <property name="tileXMax" type="int" value="15"/>
@@ -378,7 +378,7 @@
     <property name="trigger" value="msgBox"/>
    </properties>
   </object>
-  <object id="23" name="housetrigger" x="304" y="256" width="14.3636" height="14.3636">
+  <object id="23" name="housetrigger" x="304" y="256" width="16" height="16">
    <properties>
     <property name="mapFile" value="inside.tmx"/>
     <property name="setCharX" type="int" value="5"/>
@@ -386,13 +386,13 @@
     <property name="trigger" value="loadMap"/>
    </properties>
   </object>
-  <object id="24" name="signtrigger" x="448" y="256" width="15.0909" height="14">
+  <object id="24" name="signtrigger" x="448" y="256" width="16" height="16">
    <properties>
     <property name="text" value="There's nothing to see here."/>
     <property name="trigger" value="msgBox"/>
    </properties>
   </object>
-  <object id="25" gid="6045" x="318.625" y="244" width="32" height="32">
+  <object id="25" gid="6045" x="320" y="240" width="32" height="32">
    <properties>
     <property name="tileXAnim" type="bool" value="true"/>
     <property name="tileXMax" type="int" value="6"/>
@@ -400,7 +400,7 @@
     <property name="tileXTime" type="int" value="200"/>
    </properties>
   </object>
-  <object id="26" name="fountain1" gid="6611" x="560" y="242.667" width="48" height="48">
+  <object id="26" name="fountain1" gid="6611" x="560" y="240" width="48" height="48">
    <properties>
     <property name="tileXAnim" type="bool" value="true"/>
     <property name="tileXMax" type="int" value="9"/>
@@ -408,7 +408,7 @@
     <property name="tileXTime" type="int" value="300"/>
    </properties>
   </object>
-  <object id="27" name="fountain2" gid="6611" x="479.333" y="432.667" width="48" height="48">
+  <object id="27" name="fountain2" gid="6611" x="480" y="432" width="48" height="48">
    <properties>
     <property name="tileXAnim" type="bool" value="true"/>
     <property name="tileXMax" type="int" value="9"/>

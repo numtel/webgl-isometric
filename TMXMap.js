@@ -1,14 +1,19 @@
+const OBJ_TO_DRAW = Symbol();
+
 export default class TMXMap {
-  constructor() {
+  constructor(objClass) {
+    this.objClass = objClass;
+    this.loaded = false;
     this.el = null;
     this.width = null;
     this.height = null;
     this.tileWidth = null;
     this.tileHeight = null;
+    this.properties = null;
     this.tileSets = [];
     this.layers = [];
-    this.objectGroups = [];
-    this.loaded = false;
+    this.objects = [];
+    this[OBJ_TO_DRAW] = [];
   }
   async load(filename) {
     const parser = new DOMParser;
@@ -39,7 +44,7 @@ export default class TMXMap {
           this.layers.push(new TMXLayer(this, el));
           break;
         case 'objectgroup':
-          this.objectGroups.push(new TMXObjectGroup(this, el));
+          this.objects.push(new TMXObjectGroup(this, el));
           break;
         case '#text':
         case 'properties':
@@ -50,15 +55,11 @@ export default class TMXMap {
       }
     });
 
+    for(let grp of this.objects) for(let obj of grp.children) {
+      obj.gid && this[OBJ_TO_DRAW].push(obj);
+    }
     await Promise.all(this.tileSets.map(tileSet => tileSet.load()));
     this.loaded = true;
-  }
-  allObjects() {
-    const out = {};
-    for(let objGrp of this.objectGroups) {
-      Object.assign(out, objGrp.children);
-    }
-    return out;
   }
   getTileSet(tileGid) {
     for(let i=0; i<this.tileSets.length; i++) {
@@ -67,8 +68,38 @@ export default class TMXMap {
         return tileSet;
     }
   }
+  findObj(name) {
+    for(let grp of this.objects) {
+      const obj = grp.children.find(o => o.name === name);
+      if(obj) return obj;
+    }
+    return null;
+  }
+  drawObjectMap(canvas) {
+    if(!this.loaded) throw new Error('load_required');
+
+    if(!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.width = this.width * this.tileHeight;
+      canvas.height = this.height * this.tileHeight;
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(let obj of this[OBJ_TO_DRAW].sort(sortZIndex)) {
+      ctx.drawImage(
+        obj.tileset.image,
+        obj.tileX * obj.tileset.tileWidth,
+        obj.tileY * obj.tileset.tileHeight,
+        obj.tileset.tileWidth,
+        obj.tileset.tileHeight,
+        Math.round((obj.x - obj.offsetX) * this.tileWidth),
+        Math.round((obj.y - obj.offsetY - obj.height) * this.tileHeight),
+        obj.width * this.tileWidth,
+        obj.height * this.tileHeight);
+    }
+    return canvas;
+  }
   draw(layerFilterFun, canvas) {
-    // TODO support layer tinting
     if(!this.loaded) throw new Error('load_required');
 
     if(!canvas) {
@@ -132,7 +163,7 @@ class TMXObjectGroup {
     this.el = el;
     this.name = el.getAttribute('name');
     this.properties = new TMXProperties(el);
-    this.children = {};
+    this.children = [];
     el.childNodes.forEach(child => {
       if(child.nodeName !== 'object') return;
       const obj = {};
@@ -149,17 +180,18 @@ class TMXObjectGroup {
           offsetY: 0,
           offsetX: 0,
         });
-      } else {
-        obj.isRect = true;
       }
-      this.children[child.getAttribute('name')] = {
+      let out = {
         ...obj,
+        name: child.getAttribute('name'),
         width: parseInt(child.getAttribute('width'), 10) / parent.tileWidth,
         height: parseInt(child.getAttribute('height'), 10) / parent.tileHeight,
         x: parseFloat(child.getAttribute('x')) / parent.tileWidth,
         y: parseFloat(child.getAttribute('y')) / parent.tileHeight,
         ...(new TMXProperties(child)),
       };
+      if(this.parent.objClass) out = new this.parent.objClass(out);
+      this.children.push(out);
     });
   }
 }
@@ -236,4 +268,8 @@ class TMXProperties {
       });
     });
   }
+}
+
+function sortZIndex(a, b) {
+  return a.y-a.offsetY < b.y-b.offsetY ? -1 : a.y-a.offsetY > b.y-b.offsetY ? 1 : 0;
 }
