@@ -1,5 +1,3 @@
-const OBJ_TO_DRAW = Symbol();
-
 export default class TMXMap {
   constructor(objClass) {
     this.objClass = objClass;
@@ -14,7 +12,6 @@ export default class TMXMap {
     this.tileSets = [];
     this.layers = [];
     this.objects = [];
-    this[OBJ_TO_DRAW] = [];
   }
   async load(filename) {
     const parser = new DOMParser;
@@ -57,9 +54,6 @@ export default class TMXMap {
       }
     });
 
-    for(let grp of this.objects) for(let obj of grp.children) {
-      obj.gid && this[OBJ_TO_DRAW].push(obj);
-    }
     await Promise.all(this.tileSets.map(tileSet => tileSet.load()));
     this.loaded = true;
   }
@@ -77,7 +71,7 @@ export default class TMXMap {
     }
     return null;
   }
-  drawObjectMap(canvas) {
+  drawObjectMap(objFilterFun, canvas) {
     if(!this.loaded) throw new Error('load_required');
 
     if(!canvas) {
@@ -87,7 +81,11 @@ export default class TMXMap {
     }
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for(let obj of this[OBJ_TO_DRAW].sort(sortZIndex)) {
+    for(let grp of this.objects) for(let obj of
+      grp.properties.zIndexing ? grp.children.sort(sortZIndex) : grp.children
+    ) {
+      if(!obj.gid) continue;
+      if(objFilterFun && !objFilterFun(obj)) continue;
       ctx.drawImage(
         obj.tileset.image,
         obj.tileX * obj.tileset.tileWidth,

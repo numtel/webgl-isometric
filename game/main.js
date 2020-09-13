@@ -6,8 +6,7 @@ import TMXMap from '../classes/TMXMap.js';
 async function loadGame(mapFile) {
   const map = new TMXMap(MovableObject);
   await map.load(mapFile);
-  const character = map.findObj('character');
-  const character2 = map.findObj('character2');
+  let character = map.findObj('character');
 
   const pathFinder = new PathFind(map.tileMap(
     (layer) => layer.properties.blocking,
@@ -47,17 +46,17 @@ async function loadGame(mapFile) {
       else game.FRAME_NUM++;
 
       for(let grp of map.objects) for(let obj of grp.children) obj.onFrame(delta);
-      objTexture.update(map.drawObjectMap(objCanvas));
+      objTexture.update(map.drawObjectMap(objFilter, objCanvas));
     },
     onTapOrClick(event, tilePos) {
-      if(tilePos.x > 0 && tilePos.x < map.width
+      if(Math.floor(tilePos.x) === Math.floor(character.x)
+          && Math.floor(tilePos.y) === Math.floor(character.y)) {
+        character.trigger && triggers[character.trigger](character);
+      } else if(tilePos.x > 0 && tilePos.x < map.width
           && tilePos.y > 0 && tilePos.y < map.height) {
         // Move character
         const newPath = pathFinder.search(character, tilePos);
         if(newPath.length) character.curPath = newPath;
-        if(character2) {
-          character2.curPath = pathFinder.search(character2, tilePos);
-        }
       }
     },
   });
@@ -71,7 +70,8 @@ async function loadGame(mapFile) {
     layer.properties.aboveChar && !layer.properties.hidden)
   game.createImageTexture('u_above_char', aboveCharCanvas);
 
-  const objCanvas = map.drawObjectMap();
+  const objFilter = (obj) => !obj.hidden;
+  const objCanvas = map.drawObjectMap(objFilter);
   const objTexture = game.createImageTexture('u_obj', objCanvas);
 
   const retval = { map, game, character };
@@ -108,10 +108,29 @@ async function loadGame(mapFile) {
       newMount.game.TILE_SIZE = oldGame.TILE_SIZE;
       newMount.game.center(setCharX, setCharY);
     },
+    setCharacterObj(target) {
+      character.hidden = true;
+      target.hidden = true;
+      if(target.changeArtifact) {
+        const artifact = map.findObj(target.changeArtifact);
+        artifact.hidden = false;
+        artifact.x = character.x;
+        artifact.y = character.y - character.offsetY;
+      }
+      const oldCharacter = character;
+      oldCharacter.onArrival = null;
+      oldCharacter.curPath = null;
+      character = map.findObj(target.characterObj);
+      character.onArrival = arrivalHandler;
+      character.hidden = false;
+      character.x = oldCharacter.x;
+      character.y = oldCharacter.y;
+    },
   };
 
-  character.onArrival = () => {
+  const arrivalHandler = () => {
     for(let grp of map.objects) for(let obj of grp.children) {
+      if(obj.hidden) continue;
       if(obj.trigger && (obj.trigger in triggers)
           && character.x >= obj.x
           && character.x < obj.x + obj.width
@@ -121,9 +140,10 @@ async function loadGame(mapFile) {
       }
     }
   };
+  character.onArrival = arrivalHandler;
 
   document.body.append(game.element);
   return retval;
 }
 
-loadGame('maps/inside.tmx').then(mount => window.mount = mount)
+loadGame('maps/zeldish.tmx').then(mount => window.mount = mount)

@@ -69,8 +69,15 @@ export default class MovableObject {
         if(this.tileXMax === this.tileX) {
           this.onAnimEnd && this.onAnimEnd();
         }
-        this.tileX = this.tileX === this.tileXMax ?
-          this.tileXAnimStage2Frame || this.tileXMin : this.tileX + 1;
+        if(this.tileX === this.tileXMax) {
+          this.tileX = this.tileXAnimStage2Frame || this.tileXMin;
+          if(this.tileYMax) {
+            if(this.tileY === this.tileYMax) this.tileY = this.tileYMin;
+            else this.tileY += 1;
+          }
+        } else {
+          this.tileX += 1;
+        }
         this.lastFrameDelta = delta;
       }
     }

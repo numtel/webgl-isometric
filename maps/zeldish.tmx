@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.1" orientation="orthogonal" renderorder="right-down" width="60" height="60" tilewidth="16" tileheight="16" infinite="0" nextlayerid="24" nextobjectid="28">
+<map version="1.4" tiledversion="1.4.1" orientation="orthogonal" renderorder="right-down" width="60" height="60" tilewidth="16" tileheight="16" infinite="0" nextlayerid="26" nextobjectid="31">
+ <properties>
+  <property name="characterObj" value="character"/>
+ </properties>
  <tileset firstgid="1" name="Overworld" tilewidth="16" tileheight="16" tilecount="4356" columns="66">
   <image source="assets/Overworld.png" width="1056" height="1056"/>
  </tileset>
@@ -284,9 +287,27 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
+ <objectgroup id="25" name="Object Layer 3">
+  <object id="30" name="otherlayertest2" gid="5457" x="431" y="431.5" width="32" height="32">
+   <properties>
+    <property name="tileXAnim" type="bool" value="true"/>
+    <property name="tileXMax" type="int" value="10"/>
+    <property name="tileXMin" type="int" value="8"/>
+    <property name="tileXTime" type="int" value="200"/>
+    <property name="tileYMax" type="int" value="1"/>
+    <property name="tileYMin" type="int" value="0"/>
+   </properties>
+  </object>
+ </objectgroup>
  <objectgroup id="21" name="objects">
+  <properties>
+   <property name="zIndexing" type="bool" value="true"/>
+  </properties>
   <object id="14" name="character2" gid="4521" x="400" y="240" width="32" height="32">
    <properties>
+    <property name="changeArtifact" value="strandedbike"/>
+    <property name="characterObj" value="character"/>
+    <property name="hidden" type="bool" value="true"/>
     <property name="offsetX" type="float" value="0.4"/>
     <property name="offsetY" type="float" value="-0.8"/>
     <property name="speed" type="float" value="0.2"/>
@@ -298,6 +319,7 @@
     <property name="tileYLeft" type="int" value="7"/>
     <property name="tileYRight" type="int" value="5"/>
     <property name="tileYUp" type="int" value="6"/>
+    <property name="trigger" value="setCharacterObj"/>
    </properties>
   </object>
   <object id="16" name="heart1" gid="4841" x="357.333" y="342.667" width="16" height="16">
@@ -414,6 +436,25 @@
     <property name="tileXMax" type="int" value="9"/>
     <property name="tileXMin" type="int" value="7"/>
     <property name="tileXTime" type="int" value="300"/>
+   </properties>
+  </object>
+  <object id="28" name="strandedbike" gid="1918" x="400" y="320" width="16" height="16">
+   <properties>
+    <property name="characterObj" value="character2"/>
+    <property name="hidden" type="bool" value="false"/>
+    <property name="trigger" value="setCharacterObj"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="24" name="Object Layer 2">
+  <object id="29" name="otherlayertest" gid="5457" x="431" y="384.5" width="32" height="32">
+   <properties>
+    <property name="tileXAnim" type="bool" value="true"/>
+    <property name="tileXMax" type="int" value="10"/>
+    <property name="tileXMin" type="int" value="8"/>
+    <property name="tileXTime" type="int" value="200"/>
+    <property name="tileYMax" type="int" value="1"/>
+    <property name="tileYMin" type="int" value="0"/>
    </properties>
   </object>
  </objectgroup>

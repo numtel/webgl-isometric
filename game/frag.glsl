@@ -22,6 +22,7 @@ vec3 hsv2rgb(vec3 c) {
 }
 
 vec3 blend(vec3 bottom, vec4 top) {
+  if(top.a < 0.01) return bottom;
   if(PSYCHE_HUE > 0.) {
     vec3 in_hsv = rgb2hsv(top.rgb);
     in_hsv.x = mod((FRAME_NUM - PSYCHE_HUE), HUE_RATE) / HUE_RATE;
