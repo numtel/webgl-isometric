@@ -221,11 +221,8 @@ export default class IsoView {
     }
 
 
-    const draw = () => {
-      if(this.data.frame_num.x > this.options.maxFrameCount) {
-        this.data.frame_num.x = 0;
-      }
-      this.data.frame_num.x++;
+    const draw = (delta) => {
+      this.data.frame_num.x = delta || 0;
       for(let uniform of this.uniforms) uniform.update();
       this.gl.clear(this.gl.COLOR_BUFFER_BIT);
       this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);

@@ -101,5 +101,10 @@ void main() {
   vec4 cursor_tile = calc_cursor_tile();
 
   gl_FragColor = vec4(draw(px, tile, cursor_tile), 1.);
-//   gl_FragColor = texture2D(u_texture, uv_pos);
+  gl_FragColor = texture2D(u_texture, uv_pos);
+  const float freq = 4.;
+  float a1 = mod(frame_num,(1000./freq))/(1000./freq);
+  float b1 = 1. - a1;
+
+  gl_FragColor = vec4(0.,a1>b1 ? 1. : 0.,b1>a1 ? 1.:0.,1.);
 }

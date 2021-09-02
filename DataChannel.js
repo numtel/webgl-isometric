@@ -70,7 +70,7 @@ export default class DataChannel {
       this.location =
         this.isoview.gl.getUniformLocation(this.isoview.program, this.name);
     }
-    if(this.isMultiple === true || this.compoentCount === 1) {
+    if(this.isMultiple === true || this.componentCount === 1) {
       this.isoview.gl[`uniform${
         this.componentCount}${
         this.isFloat ? 'f' : 'i'}${
