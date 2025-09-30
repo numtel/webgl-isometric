@@ -20,21 +20,41 @@ export default class MovableObject {
       tileYLeft: null,
       tileYRight: null,
       tileYUp: null,
+      tileXMaxIdle: null,
+      tileXMinIdle: null,
+      tileXTimeIdle: null,
+      tileYDownIdle: null,
+      tileYLeftIdle: null,
+      tileYRightIdle: null,
+      tileYUpIdle: null,
       trigger: null,
+      facing: 'Down',
     }, raw, {
       // Do not allow map file to override these
       curPath: null,
       onArrival: null,
       onAnimEnd: null,
       lastFrameDelta: 0,
+      isIdle: true,
     });
+
+    this.hasIdleAnim = !!(this.idleAnim && ('tileXMinIdle' in this) && ('tileXMaxIdle' in this));
+    if(this.hasIdleAnim) {
+      this.tileX += this.tileXMinIdle;
+    }
+  }
+  setPath(newPath) {
+    this.curPath = newPath;
+    this.isIdle = false;
+    this.tileX = this.tileXMin;
   }
   onFrame(delta) {
     if(!this.gid) return;
     if(this.curPath) {
       if(this.curPath.length === 0){
         this.curPath = null;
-        this.tileX = this.tileXIdle;
+        this.isIdle = true;
+        this.tileX = this.hasIdleAnim ? this.tileXMinIdle : this.tileXIdle;
         this.onArrival && this.onArrival();
         return;
       }
@@ -55,12 +75,22 @@ export default class MovableObject {
           this.lastFrameDelta = delta;
         }
 
-        if(Math.abs(xDiff) > Math.abs(yDiff)) {
-          if(xDiff > 0) this.tileY = this.tileYLeft;
-          else this.tileY = this.tileYRight;
+        if (Math.abs(xDiff) > Math.abs(yDiff)) {
+          if (xDiff > 0) {
+            this.tileY = this.tileYLeft;
+            this.facing = 'Left';
+          } else {
+            this.tileY = this.tileYRight;
+            this.facing = 'Right';
+          }
         } else {
-          if(yDiff > 0) this.tileY = this.tileYUp;
-          else this.tileY = this.tileYDown;
+          if (yDiff > 0) {
+            this.tileY = this.tileYUp;
+            this.facing = 'Up';
+          } else {
+            this.tileY = this.tileYDown;
+            this.facing = 'Down';
+          }
         }
       }
     }
@@ -78,6 +108,16 @@ export default class MovableObject {
         } else {
           this.tileX += 1;
         }
+        this.lastFrameDelta = delta;
+      }
+    } else if(this.hasIdleAnim && this.isIdle) {
+      if(delta - this.lastFrameDelta > this.tileXTime) {
+        if(this.tileX === this.tileXMaxIdle) {
+          this.tileX = this.tileXMinIdle;
+        } else {
+          this.tileX += 1;
+        }
+        this.tileY = this[`tileY${this.facing}Idle`];
         this.lastFrameDelta = delta;
       }
     }

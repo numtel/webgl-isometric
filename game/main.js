@@ -56,7 +56,7 @@ async function loadGame(mapFile) {
           && tilePos.y > 0 && tilePos.y < map.height) {
         // Move character
         const newPath = pathFinder.search(character, tilePos);
-        if(newPath.length) character.curPath = newPath;
+        if(newPath.length) character.setPath(newPath);
       }
     },
   });
