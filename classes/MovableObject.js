@@ -38,7 +38,7 @@ export default class MovableObject {
       isIdle: true,
     });
 
-    this.hasIdleAnim = !!(this.idleAnim && ('tileXMinIdle' in this) && ('tileXMaxIdle' in this));
+    this.hasIdleAnim = !!(this.idleAnim && (this.tileXMinIdle !== null) && (this.tileXMaxIdle !== null));
     if(this.hasIdleAnim) {
       this.tileX += this.tileXMinIdle;
     }
@@ -117,7 +117,8 @@ export default class MovableObject {
         } else {
           this.tileX += 1;
         }
-        this.tileY = this[`tileY${this.facing}Idle`];
+        const idleKey = `tileY${this.facing}Idle`;
+        this.tileY = this[idleKey] !== null ? this[idleKey] : this[`tileY${this.facing}`];
         this.lastFrameDelta = delta;
       }
     }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="60" tilewidth="16" tileheight="16" infinite="0" nextlayerid="26" nextobjectid="31">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="60" tilewidth="16" tileheight="16" infinite="0" nextlayerid="26" nextobjectid="32">
  <properties>
   <property name="characterObj" value="character"/>
  </properties>
@@ -23,6 +23,9 @@
  </tileset>
  <tileset firstgid="6538" name="overworld48" tilewidth="48" tileheight="48" tilecount="484" columns="22">
   <image source="assets/Overworld.png" width="1056" height="1056"/>
+ </tileset>
+ <tileset firstgid="7022" name="crow1" tilewidth="32" tileheight="32" tilecount="16" columns="4">
+  <image source="assets/crow1.png" width="128" height="128"/>
  </tileset>
  <layer id="1" name="ground" width="60" height="60">
   <data encoding="csv">
@@ -248,8 +251,8 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2125,2125,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2125,2125,0,0,0,0,2125,2125,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2125,2125,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2125,2125,2125,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2125,2125,2125,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -378,13 +381,16 @@
     <property name="trigger" value="msgBox"/>
    </properties>
   </object>
-  <object id="20" name="stump1" gid="5359" x="384" y="400" width="32" height="32">
+  <object id="20" name="stump1" gid="5359" x="383.333" y="399.333" width="32" height="32">
    <properties>
+    <property name="characterObj" value="character3"/>
+    <property name="hidden" type="bool" value="false"/>
     <property name="tileXAnim" type="bool" value="true"/>
     <property name="tileXAnimStage2Frame" type="int" value="16"/>
     <property name="tileXMax" type="int" value="16"/>
     <property name="tileXMin" type="int" value="0"/>
     <property name="tileXTime" type="int" value="400"/>
+    <property name="trigger" value="setCharacterObj"/>
    </properties>
   </object>
   <object id="21" name="rock1" gid="5279" x="480" y="240" width="32" height="32">
@@ -449,6 +455,28 @@
    <properties>
     <property name="characterObj" value="character2"/>
     <property name="hidden" type="bool" value="false"/>
+    <property name="trigger" value="setCharacterObj"/>
+   </properties>
+  </object>
+  <object id="31" name="character3" gid="7026" x="384" y="479.333" width="32" height="32">
+   <properties>
+    <property name="changeArtifact" value="stump1"/>
+    <property name="characterObj" value="character"/>
+    <property name="hidden" type="bool" value="true"/>
+    <property name="idleAnim" type="bool" value="true"/>
+    <property name="offsetX" type="float" value="0.4"/>
+    <property name="offsetY" type="float" value="-0.8"/>
+    <property name="speed" type="float" value="0.05"/>
+    <property name="tileXIdle" type="int" value="0"/>
+    <property name="tileXMax" type="int" value="3"/>
+    <property name="tileXMaxIdle" type="int" value="3"/>
+    <property name="tileXMin" type="int" value="0"/>
+    <property name="tileXMinIdle" type="int" value="0"/>
+    <property name="tileXTime" type="int" value="200"/>
+    <property name="tileYDown" type="int" value="1"/>
+    <property name="tileYLeft" type="int" value="3"/>
+    <property name="tileYRight" type="int" value="2"/>
+    <property name="tileYUp" type="int" value="0"/>
     <property name="trigger" value="setCharacterObj"/>
    </properties>
   </object>
